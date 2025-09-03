@@ -1,0 +1,332 @@
+:root {
+    --primary-color: #F28C38;
+    --text-light: #000000;
+    --text-dark: #FFFFFF;
+    --text-color-light: var(--text-dark);
+    --text-color-dark: var(--text-light);
+    --bg-dark: #121212;
+    --bg-light: #FFFFFF;
+    --card-dark: #1e1e1e;
+    --card-light: #f8f9fa;
+    --border-dark: #333333;
+    --border-light: #cccccc;
+}
+
+html.dark {
+    --bg: var(--bg-dark);
+    --text: var(--text-dark);
+    --card-bg: var(--card-dark);
+    --border: var(--border-dark);
+}
+
+html.light {
+    --bg: var(--bg-light);
+    --text: var(--text-light);
+    --card-bg: var(--card-light);
+    --border: var(--border-light);
+}
+
+body {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.navbar {
+    background-color: var(--primary-color) !important;
+}
+
+h1 {
+    font-size: 1.8rem;
+}
+
+.navbar-brand, .nav-link {
+    color: var(--text-color-light) !important;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+}
+
+.nav-link.current-page {
+    color: #ffd966 !important;
+}
+
+.btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-color-light) !important;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.btn-primary:hover {
+    background-color: #e07b30 !important;
+    border-color: #e07b30 !important;
+}
+
+.theme-toggle {
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: var(--text) !important;
+}
+
+.theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.accordion-item {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) !important;
+}
+
+.accordion-header {
+    position: relative;
+}
+
+.accordion-button {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
+
+.accordion-button.collapsed {
+    background-color: var(--card-bg) !important;
+    color: var(--text) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.accordion-header .dropdown-toggle {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text) !important;
+    font-size: 0.75rem;
+    padding: 0 4px;
+}
+
+.accordion-header .dropdown-toggle::after {
+    display: none;
+}
+
+.card, .card-body {
+    background-color: var(--card-bg) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    padding: 1rem;
+}
+
+.card-header {
+    background-color: var(--primary-color) !important;
+    color: var(--text-color-light) !important;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.table {
+    background-color: var(--card-bg) !important;
+    color: var(--text) !important;
+    font-size: 0.9rem;
+}
+
+.table th, .table td {
+    background-color: var(--card-bg) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+.table thead th {
+    background-color: var(--primary-color) !important;
+    color: var(--text-color-light) !important;
+}
+
+.dropdown-menu {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.modal-title {
+    color: #888888 !important;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.dropdown-item {
+    color: var(--text) !important;
+    font-family: 'Roboto Condensed', sans-serif;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(242, 140, 56, 0.2) !important;
+}
+
+.small-table {
+    font-size: 0.8rem;
+}
+
+.small-table th,
+.small-table td {
+    padding: 3px 4px;
+}
+
+.small-text {
+    font-size: 0.8rem;
+}
+
+.xsmall-text {
+    font-size: 0.75rem;
+}
+
+.scroll-area {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.max-h-200 {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.form-control {
+    background-color: var(--card-bg) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.form-label {
+    color: var(--text-color-light) !important;
+    font-family: 'Roboto Condensed', sans-serif;
+}
+
+label.form-label {
+  color: rgb(145, 139, 128) !important;
+  font-size: 14px;
+  padding: auto;
+}
+
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+
+.btn-outline-light {
+    color: var(--text) !important;
+    border-color: var(--text) !important;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.btn-outline-light:hover {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.2) !important;
+    color: #28a745 !important;
+    border-color: #28a745 !important;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.2) !important;
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+#notification-count {
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+#notification-list .text-success {
+    color: #28a745 !important;
+}
+
+#notification-list .text-danger {
+    color: #dc3545 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-nav {
+        text-align: center;
+    }
+    .nav-link {
+        padding: 10px 0;
+    }
+    .theme-toggle {
+        margin: 10px 0;
+    }
+    .table {
+        font-size: 14px;
+    }
+    .table th, .table td {
+        padding: 8px;
+    }
+    h1 {
+        font-size: 1.5rem;
+    }
+    .card-body {
+        padding: 10px;
+    }
+    .form-control, .btn-outline-light {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .table {
+        font-size: 12px;
+    }
+    .table th, .table td {
+        padding: 5px;
+    }
+    h1 {
+        font-size: 1.2rem;
+    }
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+}
+
+/* Dashboard compact layout */
+.dashboard-compact .table th,
+.dashboard-compact .table td {
+    font-size: 0.75rem;
+    padding: 2px 4px;
+}
+.dashboard-compact .card-body {
+    padding: 8px;
+}
+.dashboard-compact .card-header {
+    padding: 6px 8px;
+}
+
+/* Allow horizontal scroll in tables when needed */
+.table-responsive {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto;
+    }
+}
+
+/* Extra small buttons */
+.btn-xxs {
+    padding: 1px 4px;
+    font-size: 0.65rem;
+}
+
+/* Smaller accordion headers in compact mode */
+.dashboard-compact .accordion-button {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+
+/* Sticky table headers */
+.scroll-area table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}

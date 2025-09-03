@@ -1,0 +1,424 @@
+2025-07-02 11:04:20,060 INFO MockExchange: Reset to initial state.
+2025-07-02 11:04:20,061 INFO StrategyManager initialized.
+2025-07-02 11:04:20,061 INFO
+
+---- TEST CASE 1: ETH/USDC Full Cycle & Restart ----
+2025-07-02 11:04:20,061 INFO StrategyInstance created for ETH/USDC with base amount 10 USDC
+2025-07-02 11:04:20,061 INFO Strategy created and registered for ETH/USDC.
+2025-07-02 11:04:20,061 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:04:20,061 INFO [ETH/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:04:20,061 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:04:20,061 INFO [ETH/USDC] Market Buy successful. Order ID: 1824add6-1433-4954-86b7-0fd1074c2586, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:04:20,061 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:20,061 INFO [ETH/USDC] Placing initial orders. Sell at 2040.0 for 0.005 ETH. Buy at 1980.0 for 10 USDC.
+2025-07-02 11:04:20,061 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2040.0. Order ID: 4c7e3ee1-fe9d-4147-a384-8a689c4a7a8d
+2025-07-02 11:04:20,061 INFO [ETH/USDC] Limit Sell order placed. ID: 4c7e3ee1-fe9d-4147-a384-8a689c4a7a8d
+2025-07-02 11:04:20,061 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1980.0. Order ID: 83949003-cc9a-4f92-b3ad-d9de4d673ad4
+2025-07-02 11:04:20,061 INFO [ETH/USDC] Limit Buy order placed. ID: 83949003-cc9a-4f92-b3ad-d9de4d673ad4
+2025-07-02 11:04:20,061 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:20,061 INFO
+---- Simulating First Limit Buy Fill (Price Drop) ----
+2025-07-02 11:04:20,061 INFO MockExchange (Simulate): Limit Buy Order 83949003-cc9a-4f92-b3ad-d9de4d673ad4 for ETH/USDC FILLED. Bought: 0.005050505050505051 ETH @ 1980.0 USDC (spent 10 USDC)
+2025-07-02 11:04:20,061 INFO [ETH/USDC] Processing event: order_filled for order 83949003-cc9a-4f92-b3ad-d9de4d673ad4
+2025-07-02 11:04:20,061 INFO [ETH/USDC] Limit Buy order filled. Price: 1980.0, Amount: 0.005050505050505051 ETH.
+2025-07-02 11:04:20,061 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Attempting to cancel order ID 4c7e3ee1-fe9d-4147-a384-8a689c4a7a8d (stored as open_sell_order_id).
+2025-07-02 11:04:20,062 INFO MockExchange: Order 4c7e3ee1-fe9d-4147-a384-8a689c4a7a8d cancelled.
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Successfully cancelled order 4c7e3ee1-fe9d-4147-a384-8a689c4a7a8d.
+2025-07-02 11:04:20,062 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.010050505050505051, Price: 2019.6000000000001. Order ID: 409bd28e-124b-4d86-a61c-1efbc522a240
+2025-07-02 11:04:20,062 INFO [ETH/USDC] New Limit Sell order placed at 2019.6000000000001 for 0.010050505050505051 ETH. ID: 409bd28e-124b-4d86-a61c-1efbc522a240
+2025-07-02 11:04:20,062 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1960.2. Order ID: a1b6d38c-e5c0-49f8-a99f-7d865a068da5
+2025-07-02 11:04:20,062 INFO [ETH/USDC] New Limit Buy order placed at 1960.2 for 10 USDC. ID: a1b6d38c-e5c0-49f8-a99f-7d865a068da5
+2025-07-02 11:04:20,062 INFO [ETH/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:20,062 INFO
+---- Simulating Sell Fill (Price Rise) ----
+2025-07-02 11:04:20,062 INFO MockExchange (Simulate): Limit Sell Order 409bd28e-124b-4d86-a61c-1efbc522a240 for ETH/USDC FILLED. Sold: 0.010050505050505051 ETH @ 2019.6000000000001 USDC (received 20.298000000000002 USDC)
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Processing event: order_filled for order 409bd28e-124b-4d86-a61c-1efbc522a240
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Limit Sell order filled. Price: 2019.6000000000001, Amount Sold: 0.010050505050505051 ETH.
+2025-07-02 11:04:20,062 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Attempting to cancel order ID a1b6d38c-e5c0-49f8-a99f-7d865a068da5 (stored as open_buy_order_id).
+2025-07-02 11:04:20,062 INFO MockExchange: Order a1b6d38c-e5c0-49f8-a99f-7d865a068da5 cancelled.
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Successfully cancelled order a1b6d38c-e5c0-49f8-a99f-7d865a068da5.
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Token balance after sell: 0.0 ETH
+2025-07-02 11:04:20,062 INFO [ETH/USDC] All tokens sold (balance: 0.0). Attempting restart.
+2025-07-02 11:04:20,062 INFO [ETH/USDC] State transition: SELL_FILLED_PROCESSING -> FULLY_SOLD_CHECKING_BALANCE
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Confirmed zero token balance. Restarting strategy.
+2025-07-02 11:04:20,062 INFO [ETH/USDC] State transition: FULLY_SOLD_CHECKING_BALANCE -> RESTARTING
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0
+2025-07-02 11:04:20,062 INFO [ETH/USDC] State transition: RESTARTING -> MARKET_BUYING
+2025-07-02 11:04:20,062 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:04:20,062 INFO [ETH/USDC] Market Buy successful. Order ID: 4229758a-a36e-487d-a8fd-e28048a92fe3, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:04:20,062 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:20,063 INFO [ETH/USDC] Placing initial orders. Sell at 2040.0 for 0.005 ETH. Buy at 1980.0 for 10 USDC.
+2025-07-02 11:04:20,063 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2040.0. Order ID: 76c71045-267b-47eb-9661-a50d9c87d6b8
+2025-07-02 11:04:20,063 INFO [ETH/USDC] Limit Sell order placed. ID: 76c71045-267b-47eb-9661-a50d9c87d6b8
+2025-07-02 11:04:20,063 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1980.0. Order ID: a7ea1b85-fd1f-4e44-98e1-ee466e81b876
+2025-07-02 11:04:20,063 INFO [ETH/USDC] Limit Buy order placed. ID: a7ea1b85-fd1f-4e44-98e1-ee466e81b876
+2025-07-02 11:04:20,063 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:20,063 INFO
+
+---- TEST CASE 2: Duplicate Strategy Prevention ----
+2025-07-02 11:04:20,063 WARNING Strategy for ETH/USDC already exists and is active. Cannot create duplicate.
+2025-07-02 11:04:20,063 INFO Successfully prevented duplicate strategy creation for ETH/USDC while active.
+2025-07-02 11:04:20,063 INFO
+
+---- TEST CASE 3: BTC/USDC Partial Sell then New Buy ----
+2025-07-02 11:04:20,063 INFO StrategyInstance created for BTC/USDC with base amount 100 USDC
+2025-07-02 11:04:20,063 INFO Strategy created and registered for BTC/USDC.
+2025-07-02 11:04:20,063 INFO [BTC/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:04:20,063 INFO [BTC/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:04:20,063 INFO MockExchange: Market Buy Executed for BTC/USDC. Spent: 100 USDC, Received: 0.0033333333333333335 BTC @ 30000.0
+2025-07-02 11:04:20,063 INFO [BTC/USDC] Market Buy successful. Order ID: bbdbbab3-1269-48b0-9639-06b40bac7e26, Price: 30000.0, Amount Received: 0.0033333333333333335 BTC
+2025-07-02 11:04:20,063 INFO [BTC/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:20,063 INFO [BTC/USDC] Placing initial orders. Sell at 30600.0 for 0.0033333333333333335 BTC. Buy at 29700.0 for 100 USDC.
+2025-07-02 11:04:20,063 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0033333333333333335, Price: 30600.0. Order ID: 526b0715-1dbd-47ad-950f-ab9db48fa8ad
+2025-07-02 11:04:20,063 INFO [BTC/USDC] Limit Sell order placed. ID: 526b0715-1dbd-47ad-950f-ab9db48fa8ad
+2025-07-02 11:04:20,063 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 29700.0. Order ID: 83785994-3b43-4af3-96fc-69a76a3db2c1
+2025-07-02 11:04:20,063 INFO [BTC/USDC] Limit Buy order placed. ID: 83785994-3b43-4af3-96fc-69a76a3db2c1
+2025-07-02 11:04:20,063 INFO [BTC/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:20,063 INFO
+---- Simulating BTC Sell Fill (but not all tokens, to test partial logic) ----
+2025-07-02 11:04:20,063 INFO MockExchange (Simulate): Limit Sell Order 526b0715-1dbd-47ad-950f-ab9db48fa8ad for BTC/USDC FILLED. Sold: 0.0033333333333333335 BTC @ 30600.0 USDC (received 102.0 USDC)
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Original token amount in sell order: 0.00333333. Simulating fill for 0.00300000.
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Processing event: order_filled for order 526b0715-1dbd-47ad-950f-ab9db48fa8ad
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Limit Sell order filled. Price: 30600.0, Amount Sold: 0.003 BTC.
+2025-07-02 11:04:20,064 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Attempting to cancel order ID 83785994-3b43-4af3-96fc-69a76a3db2c1 (stored as open_buy_order_id).
+2025-07-02 11:04:20,064 INFO MockExchange: Order 83785994-3b43-4af3-96fc-69a76a3db2c1 cancelled.
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Successfully cancelled order 83785994-3b43-4af3-96fc-69a76a3db2c1.
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Token balance after sell: 0.0003333333333333335 BTC
+2025-07-02 11:04:20,064 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 30294.0. Order ID: 7df0c835-2174-4ce8-b397-706471ad52ce
+2025-07-02 11:04:20,064 INFO [BTC/USDC] New Limit Buy order placed at 30294.0 (after partial sell). ID: 7df0c835-2174-4ce8-b397-706471ad52ce
+2025-07-02 11:04:20,064 INFO [BTC/USDC] State transition: SELL_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:20,064 INFO
+---- Simulating subsequent Buy Fill (after partial sell) ----
+2025-07-02 11:04:20,064 INFO MockExchange (Simulate): Limit Buy Order 7df0c835-2174-4ce8-b397-706471ad52ce for BTC/USDC FILLED. Bought: 0.0033009836931405558 BTC @ 30294.0 USDC (spent 100 USDC)
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Processing event: order_filled for order 7df0c835-2174-4ce8-b397-706471ad52ce
+2025-07-02 11:04:20,064 INFO [BTC/USDC] Limit Buy order filled. Price: 30294.0, Amount: 0.0033009836931405558 BTC.
+2025-07-02 11:04:20,064 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:04:20,064 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0036343170264738892, Price: 30899.88. Order ID: 5570c88a-a85d-4941-8bb5-b7aacdbf1e56
+2025-07-02 11:04:20,064 INFO [BTC/USDC] New Limit Sell order placed at 30899.88 for 0.0036343170264738892 BTC. ID: 5570c88a-a85d-4941-8bb5-b7aacdbf1e56
+2025-07-02 11:04:20,064 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 29991.06. Order ID: 2737625c-7df3-4b5a-9c08-ebfdafb9d207
+2025-07-02 11:04:20,064 INFO [BTC/USDC] New Limit Buy order placed at 29991.06 for 100 USDC. ID: 2737625c-7df3-4b5a-9c08-ebfdafb9d207
+2025-07-02 11:04:20,065 INFO [BTC/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:20,065 INFO
+
+---- END OF TESTS ----
+2025-07-02 11:04:20,065 INFO StrategyManager initialized.
+2025-07-02 11:04:35,598 INFO MockExchange: Reset to initial state.
+2025-07-02 11:04:35,598 INFO StrategyManager initialized.
+2025-07-02 11:04:35,598 INFO
+
+---- TEST CASE 1: ETH/USDC Full Cycle & Restart ----
+2025-07-02 11:04:35,598 INFO StrategyInstance created for ETH/USDC with base amount 10 USDC
+2025-07-02 11:04:35,598 INFO Strategy created and registered for ETH/USDC.
+2025-07-02 11:04:35,598 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:04:35,598 INFO [ETH/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:04:35,598 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:04:35,598 INFO [ETH/USDC] Market Buy successful. Order ID: 89814b65-3c2f-41e0-a275-6a743f8b2a7c, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:04:35,598 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:35,598 INFO [ETH/USDC] Placing initial orders. Sell at 2040.0 for 0.005 ETH. Buy at 1980.0 for 10 USDC.
+2025-07-02 11:04:35,598 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2040.0. Order ID: fc6720e1-982f-4df8-a382-0a7ba1f4c2ac
+2025-07-02 11:04:35,598 INFO [ETH/USDC] Limit Sell order placed. ID: fc6720e1-982f-4df8-a382-0a7ba1f4c2ac
+2025-07-02 11:04:35,599 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1980.0. Order ID: 0e47fb0d-6ff3-4f4b-b874-50a33118f957
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Limit Buy order placed. ID: 0e47fb0d-6ff3-4f4b-b874-50a33118f957
+2025-07-02 11:04:35,599 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:35,599 INFO
+---- Simulating First Limit Buy Fill (Price Drop) ----
+2025-07-02 11:04:35,599 INFO MockExchange (Simulate): Limit Buy Order 0e47fb0d-6ff3-4f4b-b874-50a33118f957 for ETH/USDC FILLED. Bought: 0.005050505050505051 ETH @ 1980.0 USDC (spent 10 USDC)
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Processing event: order_filled for order 0e47fb0d-6ff3-4f4b-b874-50a33118f957
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Limit Buy order filled. Price: 1980.0, Amount: 0.005050505050505051 ETH.
+2025-07-02 11:04:35,599 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Attempting to cancel order ID fc6720e1-982f-4df8-a382-0a7ba1f4c2ac (stored as open_sell_order_id).
+2025-07-02 11:04:35,599 INFO MockExchange: Order fc6720e1-982f-4df8-a382-0a7ba1f4c2ac cancelled.
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Successfully cancelled order fc6720e1-982f-4df8-a382-0a7ba1f4c2ac.
+2025-07-02 11:04:35,599 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.010050505050505051, Price: 2019.6000000000001. Order ID: 088d7d7b-a069-4cf5-baba-9be81731b78e
+2025-07-02 11:04:35,599 INFO [ETH/USDC] New Limit Sell order placed at 2019.6000000000001 for 0.010050505050505051 ETH. ID: 088d7d7b-a069-4cf5-baba-9be81731b78e
+2025-07-02 11:04:35,599 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1960.2. Order ID: 7c5b917a-52ad-40e0-bfb2-1a851ff97c8c
+2025-07-02 11:04:35,599 INFO [ETH/USDC] New Limit Buy order placed at 1960.2 for 10 USDC. ID: 7c5b917a-52ad-40e0-bfb2-1a851ff97c8c
+2025-07-02 11:04:35,599 INFO [ETH/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:35,599 INFO
+---- Simulating Sell Fill (Price Rise) ----
+2025-07-02 11:04:35,599 INFO MockExchange (Simulate): Limit Sell Order 088d7d7b-a069-4cf5-baba-9be81731b78e for ETH/USDC FILLED. Sold: 0.010050505050505051 ETH @ 2019.6000000000001 USDC (received 20.298000000000002 USDC)
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Processing event: order_filled for order 088d7d7b-a069-4cf5-baba-9be81731b78e
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Limit Sell order filled. Price: 2019.6000000000001, Amount Sold: 0.010050505050505051 ETH.
+2025-07-02 11:04:35,599 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Attempting to cancel order ID 7c5b917a-52ad-40e0-bfb2-1a851ff97c8c (stored as open_buy_order_id).
+2025-07-02 11:04:35,599 INFO MockExchange: Order 7c5b917a-52ad-40e0-bfb2-1a851ff97c8c cancelled.
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Successfully cancelled order 7c5b917a-52ad-40e0-bfb2-1a851ff97c8c.
+2025-07-02 11:04:35,599 INFO [ETH/USDC] Token balance after sell: 0.0 ETH
+2025-07-02 11:04:35,599 INFO [ETH/USDC] All tokens sold (balance: 0.0). Attempting restart.
+2025-07-02 11:04:35,600 INFO [ETH/USDC] State transition: SELL_FILLED_PROCESSING -> FULLY_SOLD_CHECKING_BALANCE
+2025-07-02 11:04:35,600 INFO [ETH/USDC] Confirmed zero token balance. Restarting strategy.
+2025-07-02 11:04:35,600 INFO [ETH/USDC] State transition: FULLY_SOLD_CHECKING_BALANCE -> RESTARTING
+2025-07-02 11:04:35,600 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0
+2025-07-02 11:04:35,600 INFO [ETH/USDC] State transition: RESTARTING -> MARKET_BUYING
+2025-07-02 11:04:35,600 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:04:35,600 INFO [ETH/USDC] Market Buy successful. Order ID: f98070cb-346f-41f2-8d09-3731b70b48af, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:04:35,600 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:35,600 INFO [ETH/USDC] Placing initial orders. Sell at 2040.0 for 0.005 ETH. Buy at 1980.0 for 10 USDC.
+2025-07-02 11:04:35,600 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2040.0. Order ID: 832cc89a-b8f3-4ca8-ae7d-add8a6f5f7e4
+2025-07-02 11:04:35,600 INFO [ETH/USDC] Limit Sell order placed. ID: 832cc89a-b8f3-4ca8-ae7d-add8a6f5f7e4
+2025-07-02 11:04:35,600 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1980.0. Order ID: 236cb788-9fef-4f6f-9d63-3f545ca018bf
+2025-07-02 11:04:35,600 INFO [ETH/USDC] Limit Buy order placed. ID: 236cb788-9fef-4f6f-9d63-3f545ca018bf
+2025-07-02 11:04:35,600 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:35,600 INFO
+
+---- TEST CASE 2: Duplicate Strategy Prevention ----
+2025-07-02 11:04:35,600 WARNING Strategy for ETH/USDC already exists and is active. Cannot create duplicate.
+2025-07-02 11:04:35,600 INFO Successfully prevented duplicate strategy creation for ETH/USDC while active.
+2025-07-02 11:04:35,600 INFO
+
+---- TEST CASE 3: BTC/USDC Partial Sell then New Buy ----
+2025-07-02 11:04:35,600 INFO StrategyInstance created for BTC/USDC with base amount 100 USDC
+2025-07-02 11:04:35,600 INFO Strategy created and registered for BTC/USDC.
+2025-07-02 11:04:35,600 INFO [BTC/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:04:35,600 INFO [BTC/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:04:35,600 INFO MockExchange: Market Buy Executed for BTC/USDC. Spent: 100 USDC, Received: 0.0033333333333333335 BTC @ 30000.0
+2025-07-02 11:04:35,600 INFO [BTC/USDC] Market Buy successful. Order ID: fec8d000-d671-44d7-8cc4-9d602c39c777, Price: 30000.0, Amount Received: 0.0033333333333333335 BTC
+2025-07-02 11:04:35,600 INFO [BTC/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:35,600 INFO [BTC/USDC] Placing initial orders. Sell at 30600.0 for 0.0033333333333333335 BTC. Buy at 29700.0 for 100 USDC.
+2025-07-02 11:04:35,600 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0033333333333333335, Price: 30600.0. Order ID: c1fd2942-9bd4-4fab-acd7-0421a8274d37
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Limit Sell order placed. ID: c1fd2942-9bd4-4fab-acd7-0421a8274d37
+2025-07-02 11:04:35,601 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 29700.0. Order ID: 9ef33bdb-486e-4784-a603-45b5e6c1a624
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Limit Buy order placed. ID: 9ef33bdb-486e-4784-a603-45b5e6c1a624
+2025-07-02 11:04:35,601 INFO [BTC/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:35,601 INFO
+---- Simulating BTC Sell Fill (but not all tokens, to test partial logic) ----
+2025-07-02 11:04:35,601 INFO MockExchange (Simulate): Limit Sell Order c1fd2942-9bd4-4fab-acd7-0421a8274d37 for BTC/USDC FILLED. Sold: 0.0033333333333333335 BTC @ 30600.0 USDC (received 102.0 USDC)
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Original token amount in sell order: 0.00333333. Simulating fill for 0.00300000.
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Processing event: order_filled for order c1fd2942-9bd4-4fab-acd7-0421a8274d37
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Limit Sell order filled. Price: 30600.0, Amount Sold: 0.003 BTC.
+2025-07-02 11:04:35,601 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Attempting to cancel order ID 9ef33bdb-486e-4784-a603-45b5e6c1a624 (stored as open_buy_order_id).
+2025-07-02 11:04:35,601 INFO MockExchange: Order 9ef33bdb-486e-4784-a603-45b5e6c1a624 cancelled.
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Successfully cancelled order 9ef33bdb-486e-4784-a603-45b5e6c1a624.
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Token balance after sell: 0.0003333333333333335 BTC
+2025-07-02 11:04:35,601 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 30294.0. Order ID: d67ae3e8-9bf8-4245-83b2-d7fd3492047d
+2025-07-02 11:04:35,601 INFO [BTC/USDC] New Limit Buy order placed at 30294.0 (after partial sell). ID: d67ae3e8-9bf8-4245-83b2-d7fd3492047d
+2025-07-02 11:04:35,601 INFO [BTC/USDC] State transition: SELL_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:35,601 INFO
+---- Simulating subsequent Buy Fill (after partial sell) ----
+2025-07-02 11:04:35,601 INFO MockExchange (Simulate): Limit Buy Order d67ae3e8-9bf8-4245-83b2-d7fd3492047d for BTC/USDC FILLED. Bought: 0.0033009836931405558 BTC @ 30294.0 USDC (spent 100 USDC)
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Processing event: order_filled for order d67ae3e8-9bf8-4245-83b2-d7fd3492047d
+2025-07-02 11:04:35,601 INFO [BTC/USDC] Limit Buy order filled. Price: 30294.0, Amount: 0.0033009836931405558 BTC.
+2025-07-02 11:04:35,602 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:04:35,602 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0036343170264738892, Price: 30899.88. Order ID: ca6c1ca6-342f-4b3a-93d4-a8e2b2c48f5a
+2025-07-02 11:04:35,602 INFO [BTC/USDC] New Limit Sell order placed at 30899.88 for 0.0036343170264738892 BTC. ID: ca6c1ca6-342f-4b3a-93d4-a8e2b2c48f5a
+2025-07-02 11:04:35,602 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 29991.06. Order ID: cb4320be-b615-4937-a76a-f752c8501d93
+2025-07-02 11:04:35,602 INFO [BTC/USDC] New Limit Buy order placed at 29991.06 for 100 USDC. ID: cb4320be-b615-4937-a76a-f752c8501d93
+2025-07-02 11:04:35,602 INFO [BTC/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:35,602 INFO
+
+---- END OF TESTS ----
+2025-07-02 11:04:35,602 INFO StrategyManager initialized.
+2025-07-02 11:04:52,522 INFO MockExchange: Reset to initial state.
+2025-07-02 11:04:52,522 INFO StrategyManager initialized.
+2025-07-02 11:04:52,522 INFO
+
+---- TEST CASE 1: ETH/USDC Full Cycle & Restart ----
+2025-07-02 11:04:52,522 INFO StrategyInstance created for ETH/USDC with base amount 10 USDC
+2025-07-02 11:04:52,522 INFO Strategy created and registered for ETH/USDC.
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:04:52,522 INFO [ETH/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:04:52,522 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Market Buy successful. Order ID: b029794d-b867-4be6-a264-fb81ee6ae9b8, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:04:52,522 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Placing initial orders. Sell at 2040.0 for 0.005 ETH. Buy at 1980.0 for 10 USDC.
+2025-07-02 11:04:52,522 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2040.0. Order ID: 410d4df2-c528-49d9-a4ae-71d28a49c145
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Limit Sell order placed. ID: 410d4df2-c528-49d9-a4ae-71d28a49c145
+2025-07-02 11:04:52,522 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1980.0. Order ID: e935ffdf-ed52-4b7a-a226-9fdc346575f1
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Limit Buy order placed. ID: e935ffdf-ed52-4b7a-a226-9fdc346575f1
+2025-07-02 11:04:52,522 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:52,522 INFO
+---- Simulating First Limit Buy Fill (Price Drop) ----
+2025-07-02 11:04:52,522 INFO MockExchange (Simulate): Limit Buy Order e935ffdf-ed52-4b7a-a226-9fdc346575f1 for ETH/USDC FILLED. Bought: 0.005050505050505051 ETH @ 1980.0 USDC (spent 10 USDC)
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Processing event: order_filled for order e935ffdf-ed52-4b7a-a226-9fdc346575f1
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Limit Buy order filled. Price: 1980.0, Amount: 0.005050505050505051 ETH.
+2025-07-02 11:04:52,522 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Attempting to cancel order ID 410d4df2-c528-49d9-a4ae-71d28a49c145 (stored as open_sell_order_id).
+2025-07-02 11:04:52,522 INFO MockExchange: Order 410d4df2-c528-49d9-a4ae-71d28a49c145 cancelled.
+2025-07-02 11:04:52,522 INFO [ETH/USDC] Successfully cancelled order 410d4df2-c528-49d9-a4ae-71d28a49c145.
+2025-07-02 11:04:52,522 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.010050505050505051, Price: 2019.6000000000001. Order ID: da72c3bc-47f5-46f3-aeaa-a8b5129e06d6
+2025-07-02 11:04:52,522 INFO [ETH/USDC] New Limit Sell order placed at 2019.6000000000001 for 0.010050505050505051 ETH. ID: da72c3bc-47f5-46f3-aeaa-a8b5129e06d6
+2025-07-02 11:04:52,523 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1960.2. Order ID: 90a094ea-6b95-46af-8542-92ef0bf646de
+2025-07-02 11:04:52,523 INFO [ETH/USDC] New Limit Buy order placed at 1960.2 for 10 USDC. ID: 90a094ea-6b95-46af-8542-92ef0bf646de
+2025-07-02 11:04:52,523 INFO [ETH/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:52,523 INFO
+---- Simulating Sell Fill (Price Rise) ----
+2025-07-02 11:04:52,523 INFO MockExchange (Simulate): Limit Sell Order da72c3bc-47f5-46f3-aeaa-a8b5129e06d6 for ETH/USDC FILLED. Sold: 0.010050505050505051 ETH @ 2019.6000000000001 USDC (received 20.298000000000002 USDC)
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Processing event: order_filled for order da72c3bc-47f5-46f3-aeaa-a8b5129e06d6
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Limit Sell order filled. Price: 2019.6000000000001, Amount Sold: 0.010050505050505051 ETH.
+2025-07-02 11:04:52,523 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Attempting to cancel order ID 90a094ea-6b95-46af-8542-92ef0bf646de (stored as open_buy_order_id).
+2025-07-02 11:04:52,523 INFO MockExchange: Order 90a094ea-6b95-46af-8542-92ef0bf646de cancelled.
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Successfully cancelled order 90a094ea-6b95-46af-8542-92ef0bf646de.
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Token balance after sell: 0.0 ETH
+2025-07-02 11:04:52,523 INFO [ETH/USDC] All tokens sold (balance: 0.0). Attempting restart.
+2025-07-02 11:04:52,523 INFO [ETH/USDC] State transition: SELL_FILLED_PROCESSING -> FULLY_SOLD_CHECKING_BALANCE
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Confirmed zero token balance. Restarting strategy.
+2025-07-02 11:04:52,523 INFO [ETH/USDC] State transition: FULLY_SOLD_CHECKING_BALANCE -> RESTARTING
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0
+2025-07-02 11:04:52,523 INFO [ETH/USDC] State transition: RESTARTING -> MARKET_BUYING
+2025-07-02 11:04:52,523 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Market Buy successful. Order ID: c34c90f7-45e1-4d21-9bea-0134eb0ebd1f, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:04:52,523 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Placing initial orders. Sell at 2040.0 for 0.005 ETH. Buy at 1980.0 for 10 USDC.
+2025-07-02 11:04:52,523 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2040.0. Order ID: 6095733f-179c-46e4-80ac-8b129e79477b
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Limit Sell order placed. ID: 6095733f-179c-46e4-80ac-8b129e79477b
+2025-07-02 11:04:52,523 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1980.0. Order ID: 2367badf-7456-43a7-9470-8f5d2d5bcf28
+2025-07-02 11:04:52,523 INFO [ETH/USDC] Limit Buy order placed. ID: 2367badf-7456-43a7-9470-8f5d2d5bcf28
+2025-07-02 11:04:52,523 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:52,523 INFO
+
+---- TEST CASE 2: Duplicate Strategy Prevention ----
+2025-07-02 11:04:52,523 WARNING Strategy for ETH/USDC already exists and is active. Cannot create duplicate.
+2025-07-02 11:04:52,523 INFO Successfully prevented duplicate strategy creation for ETH/USDC while active.
+2025-07-02 11:04:52,523 INFO
+
+---- TEST CASE 3: BTC/USDC Partial Sell then New Buy ----
+2025-07-02 11:04:52,523 INFO StrategyInstance created for BTC/USDC with base amount 100 USDC
+2025-07-02 11:04:52,523 INFO Strategy created and registered for BTC/USDC.
+2025-07-02 11:04:52,523 INFO [BTC/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:04:52,523 INFO [BTC/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:04:52,524 INFO MockExchange: Market Buy Executed for BTC/USDC. Spent: 100 USDC, Received: 0.0033333333333333335 BTC @ 30000.0
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Market Buy successful. Order ID: f29966c5-19c9-4d9d-a8af-66d5aa91c39a, Price: 30000.0, Amount Received: 0.0033333333333333335 BTC
+2025-07-02 11:04:52,524 INFO [BTC/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Placing initial orders. Sell at 30600.0 for 0.0033333333333333335 BTC. Buy at 29700.0 for 100 USDC.
+2025-07-02 11:04:52,524 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0033333333333333335, Price: 30600.0. Order ID: c850cc2f-101d-42d1-bfb8-2d6ef5cd212b
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Limit Sell order placed. ID: c850cc2f-101d-42d1-bfb8-2d6ef5cd212b
+2025-07-02 11:04:52,524 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 29700.0. Order ID: 96459609-b7f2-4cb7-abc9-5f84751e48fb
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Limit Buy order placed. ID: 96459609-b7f2-4cb7-abc9-5f84751e48fb
+2025-07-02 11:04:52,524 INFO [BTC/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:52,524 INFO
+---- Simulating BTC Sell Fill (but not all tokens, to test partial logic) ----
+2025-07-02 11:04:52,524 INFO MockExchange (Simulate): Limit Sell Order c850cc2f-101d-42d1-bfb8-2d6ef5cd212b for BTC/USDC FILLED. Sold: 0.0033333333333333335 BTC @ 30600.0 USDC (received 102.0 USDC)
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Original token amount in sell order: 0.00333333. Simulating fill for 0.00300000.
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Processing event: order_filled for order c850cc2f-101d-42d1-bfb8-2d6ef5cd212b
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Limit Sell order filled. Price: 30600.0, Amount Sold: 0.003 BTC.
+2025-07-02 11:04:52,524 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Attempting to cancel order ID 96459609-b7f2-4cb7-abc9-5f84751e48fb (stored as open_buy_order_id).
+2025-07-02 11:04:52,524 INFO MockExchange: Order 96459609-b7f2-4cb7-abc9-5f84751e48fb cancelled.
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Successfully cancelled order 96459609-b7f2-4cb7-abc9-5f84751e48fb.
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Token balance after sell: 0.0003333333333333335 BTC
+2025-07-02 11:04:52,524 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 30294.0. Order ID: 5ea05afb-ddc8-4796-a432-e4455c83521f
+2025-07-02 11:04:52,524 INFO [BTC/USDC] New Limit Buy order placed at 30294.0 (after partial sell). ID: 5ea05afb-ddc8-4796-a432-e4455c83521f
+2025-07-02 11:04:52,524 INFO [BTC/USDC] State transition: SELL_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:52,524 INFO
+---- Simulating subsequent Buy Fill (after partial sell) ----
+2025-07-02 11:04:52,524 INFO MockExchange (Simulate): Limit Buy Order 5ea05afb-ddc8-4796-a432-e4455c83521f for BTC/USDC FILLED. Bought: 0.0033009836931405558 BTC @ 30294.0 USDC (spent 100 USDC)
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Processing event: order_filled for order 5ea05afb-ddc8-4796-a432-e4455c83521f
+2025-07-02 11:04:52,524 INFO [BTC/USDC] Limit Buy order filled. Price: 30294.0, Amount: 0.0033009836931405558 BTC.
+2025-07-02 11:04:52,524 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:04:52,524 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0036343170264738892, Price: 30899.88. Order ID: 1eeb6aee-35c8-44fb-8fe6-579531d31e50
+2025-07-02 11:04:52,524 INFO [BTC/USDC] New Limit Sell order placed at 30899.88 for 0.0036343170264738892 BTC. ID: 1eeb6aee-35c8-44fb-8fe6-579531d31e50
+2025-07-02 11:04:52,524 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 29991.06. Order ID: f8c6f2cf-893a-4a4c-8416-c17b597c205b
+2025-07-02 11:04:52,524 INFO [BTC/USDC] New Limit Buy order placed at 29991.06 for 100 USDC. ID: f8c6f2cf-893a-4a4c-8416-c17b597c205b
+2025-07-02 11:04:52,524 INFO [BTC/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:04:52,524 INFO
+
+---- END OF TESTS ----
+2025-07-02 11:47:21,175 INFO MockExchange: Reset to initial state.
+2025-07-02 11:47:21,175 INFO StrategyManager initialized.
+2025-07-02 11:47:21,175 INFO
+
+---- TEST CASE 1: ETH/USDC Full Cycle & Restart (Custom X=3%, Y=1.5%) ----
+2025-07-02 11:47:21,175 INFO StrategyInstance created for ETH/USDC with base amount 10 USDC, Sell X: 3.0%, Buy Y: 1.5%
+2025-07-02 11:47:21,175 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:47:21,176 INFO [ETH/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:47:21,176 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Market Buy successful. Order ID: 7db23e38-17b6-493e-b72d-785d283fa4c5, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:47:21,176 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Placing initial orders (X=3.0%, Y=1.5%). Initial Market Buy Price: 2000.00. Sell at 2060.00 for 0.00500000 ETH. Buy at 1970.00 for 10 USDC.
+2025-07-02 11:47:21,176 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2060.0. Order ID: 24e8710e-c22e-4473-9b40-c25342024cc4
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Limit Sell order placed. ID: 24e8710e-c22e-4473-9b40-c25342024cc4
+2025-07-02 11:47:21,176 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1970.0. Order ID: 24f232f9-f7b8-40d6-8f5f-ace7aa1d0967
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Limit Buy order placed. ID: 24f232f9-f7b8-40d6-8f5f-ace7aa1d0967
+2025-07-02 11:47:21,176 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:47:21,176 INFO
+---- Simulating First Limit Buy Fill (Price Drop) ----
+2025-07-02 11:47:21,176 INFO MockExchange (Simulate): Limit Buy Order 24f232f9-f7b8-40d6-8f5f-ace7aa1d0967 for ETH/USDC FILLED. Bought: 0.005076142131979695 ETH @ 1970.0 USDC (spent 10 USDC)
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Processing event: order_filled for order 24f232f9-f7b8-40d6-8f5f-ace7aa1d0967
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Limit Buy order filled. Price: 1970.0, Amount: 0.005076142131979695 ETH.
+2025-07-02 11:47:21,176 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Attempting to cancel order ID 24e8710e-c22e-4473-9b40-c25342024cc4 (stored as open_sell_order_id).
+2025-07-02 11:47:21,176 INFO MockExchange: Order 24e8710e-c22e-4473-9b40-c25342024cc4 cancelled.
+2025-07-02 11:47:21,176 INFO [ETH/USDC] Successfully cancelled order 24e8710e-c22e-4473-9b40-c25342024cc4.
+2025-07-02 11:47:21,177 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.010076142131979694, Price: 2029.1000000000001. Order ID: 8175b908-86b0-4787-ac0a-e2c4c07bda41
+2025-07-02 11:47:21,177 INFO [ETH/USDC] (Buy Filled) New Limit Sell (X=3.0%) placed at 2029.10 for 0.01007614 ETH. ID: 8175b908-86b0-4787-ac0a-e2c4c07bda41
+2025-07-02 11:47:21,177 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1940.45. Order ID: aba89a17-ce42-46fd-a4c2-35bc77c55a3c
+2025-07-02 11:47:21,177 INFO [ETH/USDC] (Buy Filled) New Limit Buy (Y=1.5%) placed at 1940.45 for 10 USDC. ID: aba89a17-ce42-46fd-a4c2-35bc77c55a3c
+2025-07-02 11:47:21,177 INFO [ETH/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:47:21,177 INFO
+---- Simulating Sell Fill (Price Rise) ----
+2025-07-02 11:47:21,177 INFO MockExchange (Simulate): Limit Sell Order 8175b908-86b0-4787-ac0a-e2c4c07bda41 for ETH/USDC FILLED. Sold: 0.010076142131979694 ETH @ 2029.1000000000001 USDC (received 20.4455 USDC)
+2025-07-02 11:47:21,177 INFO [ETH/USDC] Processing event: order_filled for order 8175b908-86b0-4787-ac0a-e2c4c07bda41
+2025-07-02 11:47:21,177 INFO [ETH/USDC] Limit Sell order filled. Price: 2029.1000000000001, Amount Sold: 0.010076142131979694 ETH.
+2025-07-02 11:47:21,177 INFO [ETH/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:47:21,177 INFO [ETH/USDC] Attempting to cancel order ID aba89a17-ce42-46fd-a4c2-35bc77c55a3c (stored as open_buy_order_id).
+2025-07-02 11:47:21,177 INFO MockExchange: Order aba89a17-ce42-46fd-a4c2-35bc77c55a3c cancelled.
+2025-07-02 11:47:21,177 INFO [ETH/USDC] Successfully cancelled order aba89a17-ce42-46fd-a4c2-35bc77c55a3c.
+2025-07-02 11:47:21,177 INFO [ETH/USDC] Token balance after sell: 0.0 ETH
+2025-07-02 11:47:21,177 INFO [ETH/USDC] All tokens sold (balance: 0.0). Attempting restart.
+2025-07-02 11:47:21,177 INFO [ETH/USDC] State transition: SELL_FILLED_PROCESSING -> FULLY_SOLD_CHECKING_BALANCE
+2025-07-02 11:47:21,177 INFO [ETH/USDC] Confirmed zero token balance. Restarting strategy.
+2025-07-02 11:47:21,177 INFO [ETH/USDC] State transition: FULLY_SOLD_CHECKING_BALANCE -> RESTARTING
+2025-07-02 11:47:21,177 INFO [ETH/USDC] Starting strategy cycle. Current token balance: 0
+2025-07-02 11:47:21,177 INFO [ETH/USDC] State transition: RESTARTING -> MARKET_BUYING
+2025-07-02 11:47:21,178 INFO MockExchange: Market Buy Executed for ETH/USDC. Spent: 10 USDC, Received: 0.005 ETH @ 2000.0
+2025-07-02 11:47:21,178 INFO [ETH/USDC] Market Buy successful. Order ID: 70588148-fca3-4298-94a0-bb9bb0ffe5d5, Price: 2000.0, Amount Received: 0.005 ETH
+2025-07-02 11:47:21,178 INFO [ETH/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:47:21,178 INFO [ETH/USDC] Placing initial orders (X=3.0%, Y=1.5%). Initial Market Buy Price: 2000.00. Sell at 2060.00 for 0.00500000 ETH. Buy at 1970.00 for 10 USDC.
+2025-07-02 11:47:21,178 INFO MockExchange: Limit sell order placed for ETH/USDC. Amount: 0.005, Price: 2060.0. Order ID: f77827cf-9209-4382-8feb-5c6a2cf6b301
+2025-07-02 11:47:21,178 INFO [ETH/USDC] Limit Sell order placed. ID: f77827cf-9209-4382-8feb-5c6a2cf6b301
+2025-07-02 11:47:21,178 INFO MockExchange: Limit buy order placed for ETH/USDC. Amount: 10, Price: 1970.0. Order ID: 0cc8b924-e3aa-479d-8605-5fbba2fcd463
+2025-07-02 11:47:21,178 INFO [ETH/USDC] Limit Buy order placed. ID: 0cc8b924-e3aa-479d-8605-5fbba2fcd463
+2025-07-02 11:47:21,178 INFO [ETH/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:47:21,178 INFO
+
+---- TEST CASE 2: Duplicate Strategy Prevention ----
+2025-07-02 11:47:21,178 WARNING Strategy for ETH/USDC already exists and is active. Cannot create duplicate.
+2025-07-02 11:47:21,178 INFO Successfully prevented duplicate strategy creation for ETH/USDC while active.
+2025-07-02 11:47:21,178 INFO
+
+---- TEST CASE 3: BTC/USDC Partial Sell then New Buy (Custom X=2.5%, Y=0.5%) ----
+2025-07-02 11:47:21,178 INFO StrategyInstance created for BTC/USDC with base amount 100 USDC, Sell X: 2.5%, Buy Y: 0.5%
+2025-07-02 11:47:21,178 INFO [BTC/USDC] Starting strategy cycle. Current token balance: 0.0
+2025-07-02 11:47:21,178 INFO [BTC/USDC] State transition: IDLE -> MARKET_BUYING
+2025-07-02 11:47:21,178 INFO MockExchange: Market Buy Executed for BTC/USDC. Spent: 100 USDC, Received: 0.0033333333333333335 BTC @ 30000.0
+2025-07-02 11:47:21,178 INFO [BTC/USDC] Market Buy successful. Order ID: 17cbe0bb-7eda-484d-ace5-d0564daaf397, Price: 30000.0, Amount Received: 0.0033333333333333335 BTC
+2025-07-02 11:47:21,178 INFO [BTC/USDC] State transition: MARKET_BUYING -> BOUGHT_WAITING_ORDERS
+2025-07-02 11:47:21,178 INFO [BTC/USDC] Placing initial orders (X=2.5%, Y=0.5%). Initial Market Buy Price: 30000.00. Sell at 30750.00 for 0.00333333 BTC. Buy at 29850.00 for 100 USDC.
+2025-07-02 11:47:21,178 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0033333333333333335, Price: 30749.999999999996. Order ID: d47a2e4b-21f4-4bdd-a352-7e41bb7d1c1f
+2025-07-02 11:47:21,178 INFO [BTC/USDC] Limit Sell order placed. ID: d47a2e4b-21f4-4bdd-a352-7e41bb7d1c1f
+2025-07-02 11:47:21,179 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 29850.0. Order ID: 42d7f7be-697e-4577-ae8c-12c9271c8d3b
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Limit Buy order placed. ID: 42d7f7be-697e-4577-ae8c-12c9271c8d3b
+2025-07-02 11:47:21,179 INFO [BTC/USDC] State transition: BOUGHT_WAITING_ORDERS -> WAITING_SELL_AND_BUY
+2025-07-02 11:47:21,179 INFO
+---- Simulating BTC Sell Fill (but not all tokens, to test partial logic) ----
+2025-07-02 11:47:21,179 INFO MockExchange (Simulate): Limit Sell Order d47a2e4b-21f4-4bdd-a352-7e41bb7d1c1f for BTC/USDC FILLED. Sold: 0.0033333333333333335 BTC @ 30749.999999999996 USDC (received 102.5 USDC)
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Original token amount in sell order: 0.00333333. Simulating fill for 0.00300000.
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Processing event: order_filled for order d47a2e4b-21f4-4bdd-a352-7e41bb7d1c1f
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Limit Sell order filled. Price: 30749.999999999996, Amount Sold: 0.003 BTC.
+2025-07-02 11:47:21,179 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> SELL_FILLED_PROCESSING
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Attempting to cancel order ID 42d7f7be-697e-4577-ae8c-12c9271c8d3b (stored as open_buy_order_id).
+2025-07-02 11:47:21,179 INFO MockExchange: Order 42d7f7be-697e-4577-ae8c-12c9271c8d3b cancelled.
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Successfully cancelled order 42d7f7be-697e-4577-ae8c-12c9271c8d3b.
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Token balance after sell: 0.0003333333333333335 BTC
+2025-07-02 11:47:21,179 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 30596.249999999996. Order ID: 37c31ff3-7e43-4930-ac95-1e1a14ad58b7
+2025-07-02 11:47:21,179 INFO [BTC/USDC] (Sell Partially Filled) New Limit Buy (Y=0.5%) placed at 30596.25 (based on last sell price 30750.00). ID: 37c31ff3-7e43-4930-ac95-1e1a14ad58b7
+2025-07-02 11:47:21,179 INFO [BTC/USDC] State transition: SELL_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:47:21,179 INFO
+---- Simulating subsequent Buy Fill (after partial sell) ----
+2025-07-02 11:47:21,179 INFO MockExchange (Simulate): Limit Buy Order 37c31ff3-7e43-4930-ac95-1e1a14ad58b7 for BTC/USDC FILLED. Bought: 0.003268374392286637 BTC @ 30596.249999999996 USDC (spent 100 USDC)
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Processing event: order_filled for order 37c31ff3-7e43-4930-ac95-1e1a14ad58b7
+2025-07-02 11:47:21,179 INFO [BTC/USDC] Limit Buy order filled. Price: 30596.249999999996, Amount: 0.003268374392286637 BTC.
+2025-07-02 11:47:21,179 INFO [BTC/USDC] State transition: WAITING_SELL_AND_BUY -> BUY_FILLED_PROCESSING
+2025-07-02 11:47:21,179 INFO MockExchange: Limit sell order placed for BTC/USDC. Amount: 0.0036017077256199704, Price: 31361.156249999993. Order ID: 3690e6e4-9c59-4590-9155-354a9e318033
+2025-07-02 11:47:21,179 INFO [BTC/USDC] (Buy Filled) New Limit Sell (X=2.5%) placed at 31361.16 for 0.00360171 BTC. ID: 3690e6e4-9c59-4590-9155-354a9e318033
+2025-07-02 11:47:21,179 INFO MockExchange: Limit buy order placed for BTC/USDC. Amount: 100, Price: 30443.268749999996. Order ID: 28308b82-fa25-40bb-bfea-23b4c6607fb4
+2025-07-02 11:47:21,180 INFO [BTC/USDC] (Buy Filled) New Limit Buy (Y=0.5%) placed at 30443.27 for 100 USDC. ID: 28308b82-fa25-40bb-bfea-23b4c6607fb4
+2025-07-02 11:47:21,180 INFO [BTC/USDC] State transition: BUY_FILLED_PROCESSING -> WAITING_SELL_AND_BUY
+2025-07-02 11:47:21,180 INFO
+
+---- END OF TESTS ----

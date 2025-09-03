@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+{% endwith %}
+
+    <div id="notification-box" class="alert mt-3" role="alert" style="display: none;"></div>
+    <script>
+        window.selectedSymbols = {{ selected_symbols | tojson }};
+    </script>
+
+    <div class="row">
+        <div class="col-12">
+            <!-- General Settings -->
+            <div class="card mb-4 shadow-sm small-text xsmall-text">
+                <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#general-settings" aria-expanded="false" aria-controls="general-settings">
+                    General Settings
+                </div>
+                <div id="general-settings" class="collapse">
+                    <div class="card-body">
+                        <form method="POST" id="general-form">
+                            <input type="hidden" name="action" value="update_general">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="theme" class="form-label">Theme</label>
+                                    <select class="form-control" id="theme" name="theme">
+                                        <option value="dark" {% if current_theme == 'dark' %}selected{% endif %}>Dark</option>
+                                        <option value="light" {% if current_theme == 'light' %}selected{% endif %}>Light</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save General Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- API Keys and Secrets -->
+            <div class="card mb-4 shadow-sm small-text xsmall-text">
+                <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#api-keys" aria-expanded="false" aria-controls="api-keys">
+                    API Keys and Secrets
+                </div>
+                <div id="api-keys" class="collapse">
+                    <div class="card-body">
+                        <form method="POST" id="api-keys-form">
+                            <h5 class="mt-2">Binance</h5>
+                            <input type="hidden" name="action" value="update_api_keys">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="binance_testnet_api_key" class="form-label">Testnet API Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="binance_testnet_api_key" id="binance_testnet_api_key" class="form-control" value="{{ api_keys['binance']['testnet']['api_key'] or 'your_testnet_api_key' }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('binance_testnet_api_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="binance_testnet_secret_key" class="form-label">Testnet Secret Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="binance_testnet_secret_key" id="binance_testnet_secret_key" class="form-control" value="{{ api_keys['binance']['testnet']['secret_key'] or 'your_testnet_secret_key' }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('binance_testnet_secret_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="binance_real_api_key" class="form-label">Real API Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="binance_real_api_key" id="binance_real_api_key" class="form-control" value="{{ api_keys['binance']['real']['api_key'] or 'your_real_api_key' }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('binance_real_api_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="binance_real_secret_key" class="form-label">Real Secret Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="binance_real_secret_key" id="binance_real_secret_key" class="form-control" value="{{ api_keys['binance']['real']['secret_key'] or 'your_real_secret_key' }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('binance_real_secret_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="mt-4">Bybit</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="bybit_real_api_key" class="form-label">Bybit Real API Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="bybit_real_api_key" id="bybit_real_api_key" class="form-control" value="{{ api_keys['bybit']['real']['api_key'] }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('bybit_real_api_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="bybit_real_secret_key" class="form-label">Bybit Real Secret Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="bybit_real_secret_key" id="bybit_real_secret_key" class="form-control" value="{{ api_keys['bybit']['real']['secret_key'] }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('bybit_real_secret_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="mt-4">Gate.io</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="gateio_real_api_key" class="form-label">Gate.io Real API Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="gateio_real_api_key" id="gateio_real_api_key" class="form-control" value="{{ api_keys['gateio']['real']['api_key'] }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('gateio_real_api_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="gateio_real_secret_key" class="form-label">Gate.io Real Secret Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="gateio_real_secret_key" id="gateio_real_secret_key" class="form-control" value="{{ api_keys['gateio']['real']['secret_key'] }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('gateio_real_secret_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="mt-4">Bitmart</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="bitmart_real_api_key" class="form-label">Bitmart Real API Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="bitmart_real_api_key" id="bitmart_real_api_key" class="form-control" value="{{ api_keys['bitmart']['real']['api_key'] }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('bitmart_real_api_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="bitmart_real_secret_key" class="form-label">Bitmart Real Secret Key</label>
+                                    <div class="input-group">
+                                        <input type="password" name="bitmart_real_secret_key" id="bitmart_real_secret_key" class="form-control" value="{{ api_keys['bitmart']['real']['secret_key'] }}">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('bitmart_real_secret_key', this)"><i class="bi bi-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <label for="bitmart_real_uid" class="form-label">Bitmart Real UID</label>
+                                    <input type="text" name="bitmart_real_uid" id="bitmart_real_uid" class="form-control" value="{{ api_keys['bitmart']['real'].get('uid', '') }}">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save API Keys</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="card mb-4 shadow-sm small-text xsmall-text">
+                <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#trading-pairs" aria-expanded="true" aria-controls="trading-pairs">
+                    Manage Trading Pairs
+                </div>
+        <div id="trading-pairs" class="collapse show">
+            <div class="card-body">
+                <form id="add-pair-form">
+                    <div class="mb-3">
+                        <label for="new_pair" class="form-label">Add New Trading Pair</label>
+                        <div class="input-group">
+                            <select name="new_pair" id="new_pair" class="form-control">
+                                <option value="">Select a pair</option>
+                                {% for pair in available_pairs %}
+                                    {% if pair not in selected_symbols %}
+                                        <option value="{{ pair }}">{{ pair }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            <select name="exchange" id="new_exchange" class="form-control ms-2">
+                                {% for ex in exchanges %}
+                                    <option value="{{ ex }}">{{ ex }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="trading_mode" id="new_mode" class="form-control ms-2">
+                                <option value="testnet">Testnet</option>
+                                <option value="real">Real</option>
+                            </select>
+                            <select name="profit_mode" id="new_profit_mode" class="form-control ms-2">
+                                <option value="usdc">usdc</option>
+                                <option value="crypto">crypto</option>
+                            </select>
+                            <button type="submit" name="action" value="add_pair" class="btn btn-primary">Add Pair</button>
+                        </div>
+                    </div>
+                </form>
+                <form id="trading-pairs-form">
+                    <input type="hidden" name="action" value="update_pairs">
+                    
+                    <div class="mb-3">
+                        <h5>Current Trading Pairs</h5>
+                        {% for pair in saved_pairs %}
+                            <div class="card mb-2" id="settings-{{ pair['id'] }}">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                                        <h6>{{ pair['symbol'] }} ({{ pair['exchange'] }}) Settings</h6>
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="confirmRemove({{ pair['id'] }}, '{{ pair['symbol'] }}')">Remove</button>
+            </div>
+                                    <input type="hidden" name="selected_pairs" value="{{ pair['id'] }}">
+            <div class="row g-2">
+                <div class="col-md-2">
+                                            <label for="buy_percentage_{{ pair['id'] }}" class="form-label">Buy % (negative)</label>
+                                            <input type="number" step="0.01" class="form-control" name="buy_percentage_{{ pair['id'] }}" id="buy_percentage_{{ pair['id'] }}" value="{{ pair.get('buy_percentage', -2.0) }}" data-bs-toggle="tooltip" title="Negative percentage below buy price to place next buy order">
+                </div>
+                <div class="col-md-2">
+                                            <label for="sell_percentage_{{ pair['id'] }}" class="form-label">Sell %</label>
+                                            <input type="number" step="0.01" min="0.01" class="form-control" name="sell_percentage_{{ pair['id'] }}" id="sell_percentage_{{ pair['id'] }}" value="{{ pair.get('sell_percentage', 3.0) }}" data-bs-toggle="tooltip" title="Percentage above buy price to place sell order">
+                </div>
+                <div class="col-md-2">
+                                            <label for="amount_{{ pair['id'] }}" class="form-label">Amount (USDC)</label>
+                                            <input type="number" step="0.01" min="0.01" class="form-control" name="amount_{{ pair['id'] }}" id="amount_{{ pair['id'] }}" value="{{ pair.get('amount', 100.0) }}" data-bs-toggle="tooltip" title="USDC amount per trade">
+                </div>
+                <div class="col-md-2">
+                                            <label for="exchange_{{ pair['id'] }}" class="form-label">Exchange</label>
+                                            <select class="form-control" name="exchange_{{ pair['id'] }}" id="exchange_{{ pair['id'] }}">
+                                                {% for ex in exchanges %}
+                                                    <option value="{{ ex }}" {% if pair.exchange == ex %}selected{% endif %}>{{ ex }}</option>
+                                                {% endfor %}
+                                            </select>
+                </div>
+                <div class="col-md-2">
+                                            <label for="mode_{{ pair['id'] }}" class="form-label">Mode</label>
+                                            <select class="form-control" name="trading_mode_{{ pair['id'] }}" id="mode_{{ pair['id'] }}">
+                                                <option value="testnet" {% if pair.get('trading_mode', 'testnet') == 'testnet' %}selected{% endif %}>Testnet</option>
+                                                <option value="real" {% if pair.get('trading_mode', 'testnet') == 'real' %}selected{% endif %}>Real</option>
+                                            </select>
+                </div>
+                <div class="col-md-2">
+                                            <label for="profit_mode_{{ pair['id'] }}" class="form-label">Profit Mode</label>
+                                            <select class="form-control" name="profit_mode_{{ pair['id'] }}" id="profit_mode_{{ pair['id'] }}">
+                                                <option value="usdc" {% if pair.get('profit_mode', 'usdc') == 'usdc' %}selected{% endif %}>usdc</option>
+                                                <option value="crypto" {% if pair.get('profit_mode', 'usdc') == 'crypto' %}selected{% endif %}>crypto</option>
+                                            </select>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+                        <input type="hidden" id="remove_symbol" name="remove_symbol" value="">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Trading Pairs</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+    <!-- Password Change -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#password-change" aria-expanded="false" aria-controls="password-change">
+            Change Password
+        </div>
+        <div id="password-change" class="collapse">
+            <div class="card-body">
+                <form method="POST" id="change-password-form">
+                    <input type="hidden" name="action" value="change_password">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" name="current_password" id="current_password" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" name="new_password" id="new_password" class="form-control" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmRemoveModal" tabindex="-1" aria-labelledby="confirmRemoveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmRemoveModalLabel">Confirm Removal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to remove the trading pair <span id="pairToRemove"></span>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="remove-pair-form">
+                    <input type="hidden" id="pairToRemoveInput" name="pair_id">
+                    <button type="submit" class="btn btn-danger btn-sm">Confirm Removal</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+function submitRemove() {
+    const form = document.getElementById('trading-pairs-form');
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'remove_pair';
+    form.appendChild(actionInput);
+    form.submit();
+}
+
+
+  function showNotification(message, status) {
+    const box = document.getElementById('notification-box');
+    box.textContent = message;
+    box.style.display = 'block';
+    box.className = '';
+    box.classList.add('alert');
+
+    if (status === 'success') box.classList.add('alert-success');
+    else if (status === 'error' || status === 'danger') box.classList.add('alert-danger');
+    else box.classList.add('alert-info');
+
+    setTimeout(() => {
+        box.textContent = '';
+        box.style.display = 'none';
+    }, 4000);
+}
+
+
+
+
+function confirmRemove(id, symbol) {
+    if (confirm("Are you sure you want to remove " + symbol)){
+        document.getElementById('pairToRemove').textContent = symbol;
+        document.getElementById('pairToRemoveInput').value = id;
+        document.getElementById('remove_symbol').value = id;
+
+        const formData = new FormData();
+        formData.append('pair_id', id);
+        formData.append('action', 'remove_pair');
+        try {
+            const res = fetch('/api/remove_pair', {
+            method: 'POST',
+            body: formData
+            }).then((res) => {return res.json()}).then((data) => {
+
+                if (data.status === 'success') {
+                    window.location.reload();
+                }
+                showNotification(data.message, data.status || 'info');
+            });
+            
+
+        } catch (err) {
+            showNotification('Request failed: ' + err.message, 'error');
+        }
+    } 
+    
+}
+
+function toggleKeyVisibility(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (btn) btn.querySelector('i').classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        input.type = 'password';
+        if (btn) btn.querySelector('i').classList.replace('bi-eye-slash', 'bi-eye');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Content loaded")
+    const generalSettings = document.getElementById('general-settings');
+    if (!generalSettings.classList.contains('show')) {
+        generalSettings.classList.remove('show');
+    }
+
+      const forms = [
+    { id: 'general-form', url: '/api/update_general' },
+    { id: 'trading-pairs-form', url: '/api/update_pairs' },
+    { id: 'add-pair-form', url: '/api/add_pair' },
+    { id: 'remove-pair-form', url: '/api/remove_pair' },
+    { id: 'api-keys-form', url: '/api/update_api_keys' },
+    { id: 'change-password-form', url: '/api/change_password' }
+  ];
+
+  forms.forEach(({ id, url }) => {
+    const form = document.getElementById(id);
+    if (!form) return;
+
+    form.addEventListener('submit', async e => {
+        console.log("here")
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        showNotification(data.message, data.status || 'info');
+
+        // Optional: refresh data or clear inputs on success
+        if (data.status === 'success') {
+            window.location.reload();
+          if (id === 'add-pair-form') form.reset();
+          if (id === 'change-password-form') form.reset();
+        }
+        
+      } catch (err) {
+        showNotification('Request failed: ' + err.message, 'error');
+      }
+    });
+  });
+
+
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(element => {
+    new bootstrap.Tooltip(element);
+});
+
+});
+
+</script>
+{% endblock %}

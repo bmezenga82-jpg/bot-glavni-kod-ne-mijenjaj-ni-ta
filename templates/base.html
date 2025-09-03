@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ session.get('theme', 'dark') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>CryptoBot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Condensed&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+</head>
+<body>
+    {% if request.endpoint != 'login_route' %}
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">CryptoBot</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link {% if request.path == '/' %}current-page{% endif %}" href="/">Dashboard</a>
+                    <a class="nav-link {% if request.path.startswith('/trades') %}current-page{% endif %}" href="/trades">Trades</a>
+                    <a class="nav-link {% if request.path.startswith('/backtest') %}current-page{% endif %}" href="/backtest">Backtest</a>
+                    <a class="nav-link {% if request.path.startswith('/settings') %}current-page{% endif %}" href="/settings">Settings</a>
+                </div>
+                <form class="d-flex" role="search">
+                    <input class="form-control me-2" type="search" placeholder="Search Trading Pair" aria-label="Search" id="pair-search">
+                    <button class="btn btn-outline-light" type="button" onclick="searchPair()">Search</button>
+                </form>
+                <div class="navbar-nav ms-auto">
+                    <div class="nav-item dropdown" id="notification-dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Notifications <span id="notification-count" class="badge bg-danger">0</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown" id="notification-list">
+                            <!-- Notifications will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            User
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="#">Profile</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()">Logout</a></li>
+                        </ul>
+                    </div>
+                    {% set is_dark = session.get('theme', 'dark') == 'dark' %}
+                    <span class="nav-link theme-toggle d-flex align-items-center" onclick="toggleTheme()">
+                        <i class="bi {{ 'bi-sun-fill' if is_dark else 'bi-moon-fill' }} me-1" id="theme-icon"></i>
+                         {{ 'Light' if is_dark else 'Dark' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/modules/notifications.js') }}"></script>
+</body>
+</html>

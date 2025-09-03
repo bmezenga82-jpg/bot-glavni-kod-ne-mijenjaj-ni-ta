@@ -1,0 +1,22 @@
+.env
+venv/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+*.sqlite3
+*.db
+instance/
+migrations/*.pyc
+migrations/__pycache__/
+# All CSV files
+*.csv
+*.json
+!api_keys.json
+!api_keys.example.json
+
+temp_
+test

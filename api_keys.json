@@ -1,0 +1,31 @@
+{
+  "binance": {
+    "testnet": {
+      "api_key": "wK6sU8L71abptHRIYiV3xBILkyfl5ZCxgxAiSe2YGt0azBOfVqdnxeNvngefnBaI",
+      "secret_key": "PpH8AU14qWmrq0mLtynPqlTQnJoIZFxRqTVCZaSq91q7eBukNq709xbU9miBufFt"
+    },
+    "real": {
+      "api_key": "HeYKVANJSavHNjoCGm8JpWf22ePBbp0crSFwn2nJaghoxWMZXypWnhhjaKPdsKbu",
+      "secret_key": "PTaEpESjm1ME8VOvxLtgxOeazviDJtJyOV7qaY1ljr85EOSBYcOOiUrazqiLFRDj"
+    }
+  },
+  "bybit": {
+    "real": {
+      "api_key": "1rLF8bKTIkCIAmRj4d",
+      "secret_key": "SlWoqk2LReQh0QiP2wyI2EnAEA8pqpbKdteS"
+    }
+  },
+  "gateio": {
+    "real": {
+      "api_key": "eb9f933e03f9011b21cf39424b692955",
+      "secret_key": "29fca4e5500ba3df2bc77fae942671320b0790c72126809c5cd52be2f7bfa234"
+    }
+  },
+  "bitmart": {
+    "real": {
+      "api_key": "d7e89c84345ed5f156daaa98f4e2e4329dedda4a",
+      "secret_key": "c70d539626cb8c140c599dd184bb86bb97019ae06baebb9abd21551f9ebd1696",
+      "uid": "13612753"
+    }
+  }
+}

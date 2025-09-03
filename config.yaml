@@ -1,0 +1,28 @@
+base_currency: USDC
+pairs:
+- amount: 6.0
+  buy_percentage: -1.0
+  sell_percentage: 0.5
+  exchange: binance
+  symbol: SUI/USDC
+- amount: 6.0
+  buy_percentage: -1.0
+  sell_percentage: 0.5
+  exchange: bybit
+  symbol: SUI/USDC
+- amount: 6.0
+  buy_percentage: -1.0
+  sell_percentage: 0.5
+  exchange: gateio
+  symbol: SUI/USDC
+- amount: 6.0
+  buy_percentage: -1.0
+  sell_percentage: 0.5
+  exchange: bitmart
+  symbol: SUI/USDT
+trading_mode: testnet  # options: testnet, real
+database:
+  engine: sqlite
+  path: "sqlite:///mydatabase.db"
+  pool_size: 20
+  max_overflow: 40

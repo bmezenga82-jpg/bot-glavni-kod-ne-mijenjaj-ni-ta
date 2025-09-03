@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row">
+<div class="col-lg-6">
+<div class="card mb-4">
+    <div class="card-header">Backtest Parameters</div>
+    <div class="card-body">
+        <form id="backtest-form">
+            <div class="mb-3">
+                <label for="symbol" class="form-label">Trading Pair</label>
+                <select class="form-control" id="symbol" name="symbol" required>
+                    {% for pair in pairs %}
+                    <option value="{{ pair.symbol }}">{{ pair.symbol }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="exchange" class="form-label">Exchange</label>
+                <select class="form-control" id="exchange" name="exchange">
+                    {% for ex in exchanges %}
+                    <option value="{{ ex }}">{{ ex }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" required>
+            </div>
+            <div class="mb-3">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" required>
+            </div>
+            <div class="mb-3">
+                <label for="buy_percentage" class="form-label">Buy Percentage (%)</label>
+                <input type="number" step="0.01" class="form-control" id="buy_percentage" name="buy_percentage" value="2.0" required>
+            </div>
+            <div class="mb-3">
+                <label for="sell_percentage" class="form-label">Sell Percentage (%)</label>
+                <input type="number" step="0.01" class="form-control" id="sell_percentage" name="sell_percentage" value="3.0" required>
+            </div>
+            <div class="mb-3">
+                <label for="amount" class="form-label">Initial Amount (USDC)</label>
+                <input type="number" step="0.01" class="form-control" id="amount" name="amount" value="100.0" required>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="runBacktest()">Run Backtest</button>
+            <button type="button" class="btn btn-primary" onclick="runOptimize()">Optimize Parameters</button>
+        </form>
+    </div>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="card">
+    <div class="card-header">Results</div>
+    <div class="card-body">
+        <pre id="backtest-results">Results will appear here...</pre>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}

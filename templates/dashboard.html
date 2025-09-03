@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<div class="container mt-5 dashboard-compact">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <div class="col-12 mb-3">
+            <div class="card h-100 shadow-sm small-text xsmall-text">
+                <div class="card-header bg-primary text-white d-flex align-items-center" style="font-family: 'Orbitron', sans-serif;">
+                    <i class="bi bi-wallet2 me-2"></i>
+                    Account Info
+                </div>
+                <div class="card-body scroll-area">
+                    <div class="accordion" id="account-accordion"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 mb-3 d-flex">
+            <div class="card my-auto w-100 shadow-sm small-text xsmall-text">
+                <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif;">
+                    Open Orders
+                </div>
+                <div class="card-body scroll-area">
+                    <div class="table-responsive">
+                        <table class="table table-bordered small-table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Symbol</th>
+                                    <th>Exchange</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-body">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-3">
+            <!-- Market Overview -->
+            <div class="card shadow-sm small-text xsmall-text h-100">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" style="font-family: 'Orbitron', sans-serif;">
+            <span>Market Overview</span>
+            <div>
+                <label for="base-currency-select" class="text-white me-2">Base Currency:</label>
+                <select id="base-currency-select">
+                    <option value="USDC" selected>USDC</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body scroll-area">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="price-table">
+                    <thead>
+                        <tr>
+                            <th>Trading Pair</th>
+                            <th>Exchange</th>
+                            <th>Mode</th>
+                            <th>Profit Mode</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Buy %</th>
+                            <th class="text-end">Sell %</th>
+                            <th class="text-end">Amount ({{ base_currency }})</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-table-body">
+                        {% for pair in pairs %}
+                            <tr data-id="{{ pair['id'] }}" data-symbol="{{ pair['symbol'] }}" data-exchange="{{ pair['exchange'] }}" data-mode="{{ pair['trading_mode'] }}">
+                                <td>{{ pair['symbol'] }}</td>
+                                <td>{{ pair['exchange'] }}</td>
+                                <td id="mode-{{ pair['id'] }}">{{ pair['trading_mode'] }}</td>
+                                <td id="profit-{{ pair['id'] }}">{{ pair['profit_mode'] }}</td>
+                                <td id="price-{{ pair['id'] }}" class="text-end">Loading...</td>
+                                <td id="buy-{{ pair['id'] }}" class="text-end">{{ pair['buy_percentage'] }}</td>
+                                <td id="sell-{{ pair['id'] }}" class="text-end">{{ pair['sell_percentage'] }}</td>
+                                <td id="amount-{{ pair['id'] }}" class="text-end">{{ pair['amount'] }}</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        {% if pair['is_running'] %}
+                                        <button class="btn btn-xxs btn-danger action-btn" id="action-{{ pair['id'] }}">Stop</button>
+                                        {% else %}
+                                        <button class="btn btn-xxs btn-success action-btn" id="action-{{ pair['id'] }}">Start</button>
+                                        {% endif %}
+                                        <button class="btn btn-xxs btn-warning edit-action-btn {% if pair['is_running'] %}disabled{% endif %}"
+                                        id="edit-action-{{ pair['id'] }}"
+                                        onclick="openEditModal({{ pair['id'] }}, '{{ pair['symbol'] }}', {{ pair['buy_percentage'] }}, {{ pair['sell_percentage'] }}, {{ pair['amount'] }}, '{{ pair['exchange'] }}', '{{ pair['trading_mode'] }}', '{{ pair['profit_mode'] }}')">
+                                            Edit
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+            </div>
+        </div>
+        <div class="col-12 mb-3">
+            <div class="card shadow-sm small-text xsmall-text h-100">
+                <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif;">
+                    Open Positions
+                </div>
+                <div class="card-body scroll-area">
+                    <div class="table-responsive">
+                        <table class="table table-bordered small-table" id="open-positions-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Exchange</th>
+                                    <th>Mode</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Buy Price</th>
+                                    <th class="text-end">Current Price</th>
+                                    <th class="text-end">Profit</th>
+                                    <th class="text-end">Loss</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="open-positions-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Configuration Modal -->
+    <div class="modal fade" id="editConfigModal" tabindex="-1" aria-labelledby="editConfigModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-dark" id="editConfigModalLabel">Pair Configuration</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editConfigForm">
+                        <input type="hidden" id="edit-id" name="pair_id">
+                        <input type="hidden" id="edit-symbol" name="symbol">
+                        <div class="mb-3">
+                            <label for="buyPercentage" class="form-label">Buy Percentage (%)</label>
+                            <input type="number" step="0.1" class="form-control" id="buyPercentage" name="buy_percentage" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="sellPercentage" class="form-label">Sell Percentage (%)</label>
+                            <input type="number" step="0.1" class="form-control" id="sellPercentage" name="sell_percentage" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount ({{ base_currency }})</label>
+                            <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="exchangeSelect" class="form-label">Exchange</label>
+                            <select class="form-control" id="exchangeSelect" name="exchange">
+                                {% for ex in exchanges %}
+                                <option value="{{ ex }}">{{ ex }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tradingMode" class="form-label">Trading Mode</label>
+                            <select class="form-control" id="tradingMode" name="trading_mode">
+                                <option value="testnet">Testnet</option>
+                                <option value="real">Real</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="profitMode" class="form-label">Profit Mode</label>
+                            <select class="form-control" id="profitMode" name="profit_mode">
+                                <option value="usdc">usdc</option>
+                                <option value="crypto">crypto</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveConfig()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Log -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif;">
+            Strategy Log
+        </div>
+        <div class="card-body">
+            <ul id="strategy-log" class="list-group list-group-flush">
+                <!-- Logs populated by JavaScript -->
+            </ul>
+        </div>
+    </div>
+
+    <!--
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-info text-white" style="font-family: 'Orbitron', sans-serif;">
+            Live Strategy Log
+        </div>
+        <div class="card-body">
+            <pre id="live-strategy-log-output" style="height: 200px; overflow-y: scroll; background-color: #f5f5f5; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap; word-wrap: break-word;"></pre>
+        </div>
+    </div>
+    -->
+</div>
+{% endblock %}
