@@ -17,12 +17,11 @@ class TradeLogger:
             timestamp=datetime.utcnow(),
             symbol=symbol,
             side=side,
-            price=round(price, 4),
-            amount=round(amount, 2),
+            price=round(price, 8),
+            amount=round(amount, 8),
             usdt_value=usdt_value,
             exchange=exchange,
             trading_mode=trading_mode,
         )
         db.session.add(entry)
         db.session.commit()
-

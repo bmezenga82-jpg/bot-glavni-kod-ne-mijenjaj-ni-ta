@@ -1,5 +1,12 @@
 import { updateNotifications } from './notifications.js';
+import { toggleBot } from './bot_control.js';
 window.currentTradeStatus = {};
+
+// Expose functions to window for inline onclick handlers in dynamically generated HTML
+window.resetProfit = resetProfit;
+window.removePairProfit = removePairProfit;
+window.resetExchangeProfit = resetExchangeProfit;
+window.toggleBot = toggleBot;
 
 export function initializeMarketTable(pairs, priceCache) {
     const table = $('#market-overview-table').DataTable({
@@ -67,10 +74,10 @@ export function updateData() {
             if (totalProfitElement) {
                 totalProfitElement.innerText = data.total_profit.toFixed(2);
             }
-        const activePairsElement = document.getElementById('active-pairs');
-        if (activePairsElement) {
-            activePairsElement.innerText = data.active_pairs;
-        }
+            const activePairsElement = document.getElementById('active-pairs');
+            if (activePairsElement) {
+                activePairsElement.innerText = data.active_pairs;
+            }
 
             // Populate initial prices in the main price table from /api/data
             if (data.prices) {
@@ -326,7 +333,7 @@ function renderOpenPositions(list) {
             <td>${symbol}</td>
             <td>${exchange}</td>
             <td>${modeLabel}</td>
-            <td class="text-end">${totalQty.toFixed(6)}</td>
+            <td class="text-end">${totalQty.toFixed(8)}</td>
             <td class="text-end">-</td>
             <td class="text-end">${currentPrice !== null && currentPrice !== undefined ? Number(currentPrice).toFixed(4) : 'N/A'}</td>
             <td class="text-end text-success">${totalProfitGroup.toFixed(2)}</td>
@@ -345,7 +352,7 @@ function renderOpenPositions(list) {
                 <td></td>
                 <td></td>
                 <td>${p.trading_mode}</td>
-                <td class="text-end">${Number(p.quantity).toFixed(6)}</td>
+                <td class="text-end">${Number(p.quantity).toFixed(8)}</td>
                 <td class="text-end">${Number(p.buy_price).toFixed(4)}</td>
                 <td class="text-end">${p.current_price !== null && p.current_price !== undefined ? Number(p.current_price).toFixed(4) : 'N/A'}</td>
                 <td class="text-end text-success">${pnl !== null && pnl > 0 ? pnl.toFixed(2) : '0.00'}</td>

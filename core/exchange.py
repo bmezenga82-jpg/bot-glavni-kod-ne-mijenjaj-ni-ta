@@ -349,10 +349,13 @@ class ExchangeConnector:
 
     def market_sell(self, symbol, qty):
         try:
-            qty = round(qty, 2)
+            try:
+                qty = float(self.exchange.amount_to_precision(symbol, qty))
+            except Exception:
+                qty = round(qty, 8)
             order = self._api_call(self.exchange.create_market_sell_order, symbol, qty)
             price = self.get_price(symbol)
-            logger.info("Market Sell %.2f of %s", qty, symbol)
+            logger.info("Market Sell %.8f of %s", qty, symbol)
             return {
                 'order_id': order['id'],
                 'average': price,
@@ -367,12 +370,12 @@ class ExchangeConnector:
             try:
                 price = float(self.exchange.price_to_precision(symbol, price))
             except Exception:
-                price = round(price, 4)
+                price = round(price, 8)
 
             try:
                 qty = float(self.exchange.amount_to_precision(symbol, qty))
             except Exception:
-                qty = round(qty, 2)
+                qty = round(qty, 8)
 
             if side == "buy":
                 order = self._api_call(self.exchange.create_limit_buy_order, symbol, qty, price)
@@ -381,7 +384,7 @@ class ExchangeConnector:
             else:
                 raise ValueError("Invalid order side")
 
-            logger.info("Placing %s order on %s for %.2f at %.4f", side.upper(), symbol, qty, price)
+            logger.info("Placing %s order on %s for %.8f at %.8f", side.upper(), symbol, qty, price)
             return {
                 'order_id': order['id'],
                 'price': price,

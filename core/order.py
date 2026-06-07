@@ -8,8 +8,8 @@ class OrderManager:
     def set_order(self, symbol, side, price, amount, order_id=None, status="open", exchange="binance"):
         existing = Order.query.filter_by(symbol=symbol, side=side).first()
         if existing:
-            existing.price = round(price, 4)
-            existing.amount = round(amount, 2)
+            existing.price = round(price, 8)
+            existing.amount = round(amount, 8)
             existing.status = status
             existing.order_id = order_id
             existing.filled = 0.0
@@ -18,8 +18,8 @@ class OrderManager:
             new_order = Order(
                 symbol=symbol,
                 side=side,
-                price=round(price, 4),
-                amount=round(amount, 2),
+                price=round(price, 8),
+                amount=round(amount, 8),
                 exchange=exchange,
                 status=status,
                 order_id=order_id,
@@ -31,8 +31,8 @@ class OrderManager:
     def update_fill(self, symbol, side, filled, remaining, status):
         order = Order.query.filter_by(symbol=symbol, side=side).first()
         if order:
-            order.filled = round(filled, 2)
-            order.amount = round(remaining, 2)
+            order.filled = round(filled, 8)
+            order.amount = round(remaining, 8)
             order.status = status
             db.session.add(order)
             db.session.commit()

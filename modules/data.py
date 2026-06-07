@@ -75,8 +75,8 @@ def get_data(config, bot_running, app_instance, bot_manager_instance):
     # ``amount`` here represents the base asset quantity
     for order in order_mgr.get_orders():
         data["orders"].setdefault(order.symbol, {})[order.side] = {
-            "price": round(order.price, 4),
-            "amount": round(order.amount, 2),
+            "price": round(order.price, 8),
+            "amount": round(order.amount, 8),
             "order_id": order.order_id,
             "exchange": order.exchange,
         }

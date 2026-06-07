@@ -160,8 +160,8 @@ def trade_loop(
                     else:
                         sell_qty = qty
                         retained_qty = 0.0
-                    sell_qty = round(sell_qty, 6)
-                    retained_qty = round(retained_qty, 6)
+                    sell_qty = round(sell_qty, 8)
+                    retained_qty = round(retained_qty, 8)
                     sell_order = exchange.place_limit_order(symbol, 'sell', sell_price, sell_qty)
                     if sell_order and 'order_id' in sell_order:
                         sell_order_id = sell_order['order_id']
@@ -218,8 +218,8 @@ def trade_loop(
                 else:
                     sell_qty = qty
                     retained_qty = 0.0
-                sell_qty = round(sell_qty, 6)
-                retained_qty = round(retained_qty, 6)
+                sell_qty = round(sell_qty, 8)
+                retained_qty = round(retained_qty, 8)
                 sell = exchange.place_limit_order(symbol, 'sell', sell_price, sell_qty)
                 if sell and 'order_id' in sell:
                     sell_order_id = sell['order_id']
