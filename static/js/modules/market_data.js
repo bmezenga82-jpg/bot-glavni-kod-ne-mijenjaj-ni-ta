@@ -298,6 +298,20 @@ function renderOpenPositions(list) {
     const tbody = document.getElementById('open-positions-body');
     if (!tbody) return;
 
+    // Preimenuj zaglavlje drugog stupca u Qty
+    const qtyHeader = document.querySelector('#open-positions-table thead th:nth-child(2)');
+    if (qtyHeader) qtyHeader.textContent = 'Qty';
+    const liveHeader = document.querySelector('#open-positions-table thead th:nth-child(3)');
+    if (liveHeader) liveHeader.textContent = 'Live Price';
+    const entryHeader = document.querySelector('#open-positions-table thead th:nth-child(4)');
+    if (entryHeader) entryHeader.textContent = 'Entry Price';
+    const costHeader = document.querySelector('#open-positions-table thead th:nth-child(5)');
+    if (costHeader) costHeader.textContent = 'Cost';
+    const valueHeader = document.querySelector('#open-positions-table thead th:nth-child(6)');
+    if (valueHeader) valueHeader.textContent = 'Value';
+    const pnlHeader = document.querySelector('#open-positions-table thead th:nth-child(7)');
+    if (pnlHeader) pnlHeader.textContent = 'PnL';
+
     // capture expanded groups before re-render
     const expanded = new Set();
     tbody.querySelectorAll('tr.group-header').forEach(tr => {
@@ -309,6 +323,10 @@ function renderOpenPositions(list) {
     tbody.innerHTML = '';
 
     const grouped = {};
+    let grandTotalInvestment = 0;
+    let grandTotalNetPnl = 0;
+    let grandTotalCurrentValue = 0;
+
     list.forEach(pos => {
         const key = `${pos.symbol}|${pos.exchange}`;
         if (!grouped[key]) grouped[key] = [];
@@ -319,48 +337,134 @@ function renderOpenPositions(list) {
         const [symbol, exchange] = key.split('|');
         const groupClass = `pos-group-${symbol.replace(/[^a-zA-Z0-9]/g, '')}-${exchange}`;
         const totalQty = positions.reduce((s, p) => s + Number(p.quantity), 0);
+        const totalInvestmentGroup = positions.reduce((s, p) => s + (Number(p.buy_price) * Number(p.quantity)), 0);
         const totalProfitGroup = positions.reduce((s, p) => s + (p.current_pnl > 0 ? p.current_pnl : 0), 0);
         const totalLossGroup = positions.reduce((s, p) => s + (p.current_pnl < 0 ? p.current_pnl : 0), 0);
+        const netPnlGroup = totalProfitGroup + totalLossGroup;
+        const avgBuyPrice = totalQty > 0 ? totalInvestmentGroup / totalQty : 0;
+        const roiGroup = totalInvestmentGroup > 0 ? (netPnlGroup / totalInvestmentGroup) * 100 : 0;
+        const profitMode = positions[0].profit_mode || 'usdc';
         const currentPrice = positions[0].current_price;
+        const currentValue = currentPrice !== null ? totalQty * currentPrice : 0;
         const modes = [...new Set(positions.map(p => p.trading_mode))];
         const modeLabel = modes.length === 1 ? modes[0] : 'mixed';
         const isExpanded = expanded.has(groupClass);
 
+        grandTotalInvestment += totalInvestmentGroup;
+        grandTotalNetPnl += netPnlGroup;
+        grandTotalCurrentValue += currentValue;
+
         const header = document.createElement('tr');
         header.className = 'table-secondary group-header';
         header.dataset.groupKey = groupClass;
+        header.style.verticalAlign = 'top';
         header.innerHTML = `
-            <td>${symbol}</td>
-            <td>${exchange}</td>
-            <td>${modeLabel}</td>
-            <td class="text-end">${totalQty.toFixed(8)}</td>
-            <td class="text-end">-</td>
-            <td class="text-end">${currentPrice !== null && currentPrice !== undefined ? Number(currentPrice).toFixed(4) : 'N/A'}</td>
-            <td class="text-end text-success">${totalProfitGroup.toFixed(2)}</td>
-            <td class="text-end text-danger">${Math.abs(totalLossGroup).toFixed(2)}</td>
-            <td class="text-end">
-                <button class="btn btn-xxs btn-light toggle-pos" data-target="${groupClass}"><i class="bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}"></i></button>
+            <td style="white-space: nowrap;">
+                <div class="d-flex flex-column align-items-start">
+                    <div class="fw-bold text-primary" style="font-size: 1.15rem; line-height: 1; margin-bottom: 2px;">${symbol}</div>
+                    <div class="fw-bold text-uppercase" style="font-size: 0.75rem; line-height: 1; color: #ffc107;">${exchange}</div>
+                    <div class="text-info mt-1 fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px;">PROFIT: ${profitMode.toUpperCase()}</div>
+                </div>
+            </td>
+            <td class="text-end" style="white-space: nowrap;">
+                <div class="d-flex flex-column align-items-end">
+                    <div class="fw-bold text-danger" style="font-size: 1rem; line-height: 1;">${totalQty.toFixed(6)}</div>
+                </div>
+            </td>
+            <td class="text-end" style="white-space: nowrap;">
+                <div class="d-flex flex-column align-items-end">
+                    <div class="fw-bold text-primary" style="font-size: 0.9rem; line-height: 1;">$${currentPrice !== null ? Number(currentPrice).toFixed(4) : 'N/A'}</div>
+                </div>
+            </td>
+            <td class="text-end" style="white-space: nowrap;">
+                <div class="d-flex flex-column align-items-end">
+                    <div class="fw-bold text-warning" style="font-size: 0.9rem; line-height: 1;">$${avgBuyPrice.toFixed(4)}</div>
+                </div>
+            </td>
+            <td class="text-end" style="white-space: nowrap;">
+                <div class="d-flex flex-column align-items-end">
+                    <div class="fw-bold text-info" style="font-size: 0.9rem; line-height: 1;">$${totalInvestmentGroup.toFixed(2)}</div>
+                    <div class="text-muted mt-1" style="font-size: 0.55rem; letter-spacing: 0.5px;">COST</div>
+                </div>
+            </td>
+            <td class="text-end" style="white-space: nowrap;">
+                <div class="d-flex flex-column align-items-end">
+                    <div class="fw-bold text-primary" style="font-size: 1rem; line-height: 1;">$${currentValue.toFixed(2)}</div>
+                    <div class="text-muted mt-1" style="font-size: 0.55rem; letter-spacing: 0.5px;">CURRENT</div>
+                </div>
+            </td>
+            <td class="text-end" style="white-space: nowrap;">
+                <div class="d-flex flex-column align-items-end">
+                    <div class="fw-bold ${netPnlGroup >= 0 ? 'text-success' : 'text-danger'}" style="font-size: 1rem; line-height: 1;">${netPnlGroup >= 0 ? '+' : ''}${netPnlGroup.toFixed(2)}</div>
+                    <div class="badge ${roiGroup >= 0 ? 'bg-success' : 'bg-danger'} mt-1" style="font-size: 0.7rem;">${roiGroup >= 0 ? '▲' : '▼'} ${Math.abs(roiGroup).toFixed(2)}%</div>
+                </div>
+            </td>
+            <td class="text-end" style="width: 1%; white-space: nowrap;">
+                ${positions.length > 1 ? `<button class="btn btn-xxs btn-light toggle-pos" data-target="${groupClass}"><i class="bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}"></i></button>` : ''}
                 <button class="btn btn-xxs btn-danger ms-1 remove-pos" data-symbol="${symbol}" data-exchange="${exchange}" data-mode="${modeLabel}"><i class="bi bi-x-circle"></i></button>
             </td>`;
         tbody.appendChild(header);
 
-        positions.forEach(p => {
-            const pnl = typeof p.current_pnl === 'number' ? p.current_pnl : null;
-            const row = document.createElement('tr');
-            row.className = `collapse ${groupClass}${isExpanded ? ' show' : ''}`;
-            row.innerHTML = `
-                <td></td>
-                <td></td>
-                <td>${p.trading_mode}</td>
-                <td class="text-end">${Number(p.quantity).toFixed(8)}</td>
-                <td class="text-end">${Number(p.buy_price).toFixed(4)}</td>
-                <td class="text-end">${p.current_price !== null && p.current_price !== undefined ? Number(p.current_price).toFixed(4) : 'N/A'}</td>
-                <td class="text-end text-success">${pnl !== null && pnl > 0 ? pnl.toFixed(2) : '0.00'}</td>
-                <td class="text-end text-danger">${pnl !== null && pnl < 0 ? Math.abs(pnl).toFixed(2) : '0.00'}</td>
-                <td></td>`;
-            tbody.appendChild(row);
-        });
+        if (positions.length > 1) {
+            positions.forEach(p => {
+                const pnl = typeof p.current_pnl === 'number' ? p.current_pnl : null;
+                const investment = Number(p.quantity) * Number(p.buy_price);
+                const curVal = p.current_price !== null ? Number(p.quantity) * p.current_price : 0;
+                const pnlPct = pnl !== null && investment > 0 ? (pnl / investment) * 100 : 0;
+
+                const row = document.createElement('tr');
+                row.className = `collapse ${groupClass}${isExpanded ? ' show' : ''}`;
+                row.innerHTML = `
+                <td><div class="ps-4 text-muted" style="font-size: 0.65rem; letter-spacing: 1px;">ENTRY</div></td>
+                    <td class="text-end">
+                        <div class="d-flex flex-column align-items-end">
+                            <div class="fw-bold text-danger" style="font-size: 0.85rem; line-height: 1;">${Number(p.quantity).toFixed(6)}</div>
+                        </div>
+                    </td>
+                    <td class="text-end"><div class="fw-bold text-primary" style="font-size: 0.8rem;">$${p.current_price !== null ? Number(p.current_price).toFixed(4) : 'N/A'}</div></td>
+                    <td class="text-end">
+                        <div class="d-flex flex-column align-items-end">
+                            <div class="fw-bold text-warning" style="font-size: 0.85rem; line-height: 1;">$${Number(p.buy_price).toFixed(4)}</div>
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex flex-column align-items-end">
+                            <div class="fw-bold text-info" style="font-size: 0.85rem; line-height: 1;">$${investment.toFixed(2)}</div>
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex flex-column align-items-end">
+                            <div class="fw-bold text-primary" style="font-size: 0.85rem; line-height: 1;">$${curVal.toFixed(2)}</div>
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex flex-column align-items-end">
+                            <div class="small fw-bold ${pnl >= 0 ? 'text-success' : 'text-danger'}" style="line-height: 1;">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}</div>
+                            <div class="text-muted mt-1" style="font-size: 0.6rem; line-height: 1;">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</div>
+                        </div>
+                    </td>
+                    <td></td>`;
+                tbody.appendChild(row);
+            });
+        }
     });
+
+    if (list.length > 0) {
+        const grandTotalRoi = grandTotalInvestment > 0 ? (grandTotalNetPnl / grandTotalInvestment) * 100 : 0;
+        const footer = document.createElement('tr');
+        footer.className = 'table-dark fw-bold border-top-2';
+        footer.innerHTML = `
+            <td class="text-center text-uppercase small">Portfolio Total:</td>
+            <td colspan="3"></td>
+            <td class="text-end" style="color: #0dcaf0; white-space: nowrap;">$${grandTotalInvestment.toFixed(2)}</td>
+            <td class="text-end" style="color: #0d6efd; white-space: nowrap;">$${grandTotalCurrentValue.toFixed(2)}</td>
+            <td class="text-end ${grandTotalNetPnl >= 0 ? 'text-success' : 'text-danger'}">
+                ${grandTotalNetPnl >= 0 ? '+' : ''}${grandTotalNetPnl.toFixed(2)}
+                <span class="badge ${grandTotalRoi >= 0 ? 'bg-success' : 'bg-danger'} ms-1">${grandTotalRoi >= 0 ? '+' : ''}${grandTotalRoi.toFixed(2)}%</span>
+            </td>
+            <td></td>`;
+        tbody.appendChild(footer);
+    }
 
 
     tbody.querySelectorAll('button.toggle-pos').forEach(btn => {

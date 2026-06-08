@@ -1,21 +1,21 @@
 base_currency: USDC
 database:
   engine: sqlite
+  max_overflow: 40
   path: sqlite:///mydatabase.db
   pool_size: 20
-  max_overflow: 40
 pairs:
 - amount: 6.0
-  buy_percentage: -0.04
+  buy_percentage: -1.0
   exchange: binance
   id: 1
   profit_mode: usdc
-  sell_percentage: 0.05
+  sell_percentage: 0.5
   symbol: SUI/USDC
   trading_mode: testnet
 - amount: 6.0
   buy_percentage: -1.0
-  exchange: bybit
+  exchange: gateio
   id: 2
   profit_mode: usdc
   sell_percentage: 0.5
@@ -23,26 +23,26 @@ pairs:
   trading_mode: real
 - amount: 6.0
   buy_percentage: -1.0
-  exchange: gateio
-  id: 3
-  profit_mode: usdc
-  sell_percentage: 0.5
-  symbol: SUI/USDC
-  trading_mode: real
-- amount: 6.0
-  buy_percentage: -1.0
   exchange: bitmart
-  id: 4
+  id: 3
   profit_mode: usdc
   sell_percentage: 0.5
   symbol: SUI/USDT
   trading_mode: real
-- amount: 100.0
-  buy_percentage: -2.0
+- amount: 20.0
+  buy_percentage: -0.3
+  exchange: binance
+  id: 4
+  profit_mode: usdc
+  sell_percentage: 0.3
+  symbol: ETH/USDC
+  trading_mode: testnet
+- amount: 20.0
+  buy_percentage: -0.2
   exchange: binance
   id: 5
   profit_mode: usdc
-  sell_percentage: 3.0
-  symbol: ADA/USDC
+  sell_percentage: 0.3
+  symbol: BNB/USDC
   trading_mode: testnet
 trading_mode: testnet

@@ -1,5 +1,5 @@
 import pandas as pd
-from core.models import Position, ProfitLog, TradeLog, PairProfit
+from core.models import Position, ProfitLog, TradeLog, PairProfit, TradingPair
 from flask import jsonify, session
 from modules.bot_control import portfolio, order_mgr, profit_tracker
 from modules.utils import get_price, get_pairs, load_api_keys
@@ -367,6 +367,9 @@ def get_open_positions():
 
         positions = []
         for (symbol, exchange, mode), tlist in grouped.items():
+            pair = TradingPair.query.filter_by(symbol=symbol, exchange=exchange, trading_mode=mode).first()
+            profit_mode = pair.profit_mode if pair else 'usdc'
+
             queue: list[list[float]] = []  # [qty, price]
             for tr in tlist:
                 if tr.side.lower() == "buy":
@@ -402,6 +405,7 @@ def get_open_positions():
                         "quantity": qty,
                         "current_price": current_price,
                         "current_pnl": pnl,
+                        "profit_mode": profit_mode
                     }
                 )
         return positions
