@@ -70,9 +70,41 @@ def trade_loop(
                 b = ex_buys[0]
                 buy_order_id = b['id']
                 order_mgr.set_order(symbol, 'buy', b['price'], b['amount'], b['id'], exchange=settings['exchange'])
+
+            # Provjeri jesu li se buy orderi ispunili dok je bot bio dole (zadnjih 10 min)
+            try:
+                since_ms = int((time.time() - 600) * 1000)
+                recent_trades = exchange.exchange.fetch_my_trades(symbol, since=since_ms)
+                open_sell_prices = {o['price'] for o in ex_sells}
+                for t in recent_trades:
+                    if t['side'] != 'buy' or not t.get('amount', 0):
+                        continue
+                    expected_sell = t['price'] * (1 + sell_pct / 100)
+                    # Provjeri je li ovaj buy već pokriven sell orderom
+                    already_covered = any(
+                        abs(sp - expected_sell) / expected_sell < 0.002
+                        for sp in open_sell_prices
+                    )
+                    if not already_covered:
+                        new_sell = exchange.place_limit_order(symbol, 'sell', expected_sell, t['amount'])
+                        if new_sell and 'order_id' in new_sell:
+                            sell_orders.append({
+                                'id': new_sell['order_id'],
+                                'price': expected_sell,
+                                'amount': t['amount'],
+                                'buy_price': t['price'],
+                                'retained_qty': 0.0,
+                            })
+                            order_mgr.set_order(symbol, 'sell', expected_sell, t['amount'], new_sell['order_id'], exchange=settings['exchange'])
+                            open_sell_prices.add(expected_sell)
+                            logger.info(f"[RECOVERY] Sell postavljen za buy ispunjen u downtime: {t['amount']} @ {expected_sell:.4f}")
+                            add_notification(symbol, f"Recovery: sell za downtime buy ({t['amount']:.5f} @ {expected_sell:.4f})", 'success')
+            except Exception as e:
+                logger.warning(f"[RECOVERY] Nije mogao provjeriti downtime fillove: {e}")
+
             recovered = True
-            add_notification(symbol, f"Recovery: nastavljam s {len(ex_sells)} sell + {len(ex_buys)} buy ordera", 'success')
-            logger.info(f"[RECOVERY] {symbol}: {len(ex_sells)} sell, {len(ex_buys)} buy — nastavlja bez market buy")
+            add_notification(symbol, f"Recovery: nastavljam s {len(sell_orders)} sell + {len(ex_buys)} buy ordera", 'success')
+            logger.info(f"[RECOVERY] {symbol}: {len(sell_orders)} sell, {len(ex_buys)} buy — nastavlja bez market buy")
     except Exception as e:
         logger.warning(f"[RECOVERY] {symbol}: nije mogao dohvatiti ordere, svježi start ({e})")
 
