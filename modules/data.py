@@ -71,15 +71,20 @@ def get_data(config, bot_running, app_instance, bot_manager_instance):
         },
         "account_info": {},  # This will be populated with detailed info
     }
-    # Build orders dictionary keyed by symbol -> side
-    # ``amount`` here represents the base asset quantity
+    # Prikaži ordere samo za parove koji trenutno rade
+    running_symbols = {
+        pair['symbol']
+        for pair in all_pairs_data
+        if bot_manager_instance.is_running(pair['id'])
+    }
     for order in order_mgr.get_orders():
-        data["orders"].setdefault(order.symbol, {})[order.side] = {
-            "price": round(order.price, 8),
-            "amount": round(order.amount, 8),
-            "order_id": order.order_id,
-            "exchange": order.exchange,
-        }
+        if order.symbol in running_symbols:
+            data["orders"].setdefault(order.symbol, {})[order.side] = {
+                "price": round(order.price, 8),
+                "amount": round(order.amount, 8),
+                "order_id": order.order_id,
+                "exchange": order.exchange,
+            }
 
 
     api_keys = load_api_keys()

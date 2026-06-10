@@ -64,6 +64,18 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # Očisti stare ordere koji su ostali od prethodnog procesa (VPS restart, crash)
+        try:
+            from core.models import Order
+            from core.extensions import db as _db
+            stale = Order.query.all()
+            if stale:
+                for o in stale:
+                    _db.session.delete(o)
+                _db.session.commit()
+                logging.getLogger(__name__).info(f"Startup: obrisano {len(stale)} starih ordera iz baze")
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Startup: nije mogao obrisati stare ordere: {e}")
 
     return app
 
