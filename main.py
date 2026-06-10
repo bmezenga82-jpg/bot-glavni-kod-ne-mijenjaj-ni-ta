@@ -35,7 +35,6 @@ def trade_loop(
     profit_mode = settings.get('profit_mode', 'usdc')
 
     buy_order_id: str | None = None
-    # Use a list to track multiple sell orders
     sell_orders = []
 
     def cancel_all_orders():
@@ -49,8 +48,36 @@ def trade_loop(
         sell_orders.clear()
         order_mgr.cancel_orders(symbol)
 
-    # Clean up any lingering orders before starting
-    cancel_all_orders()
+    # Recovery: provjeri exchange za postojeće ordere — nastavi od tuda umjesto svježeg starta
+    recovered = False
+    try:
+        open_orders = exchange.exchange.fetch_open_orders(symbol)
+        ex_sells = [o for o in open_orders if o['side'] == 'sell']
+        ex_buys  = [o for o in open_orders if o['side'] == 'buy']
+
+        if ex_sells or ex_buys:
+            for o in ex_sells:
+                implied_buy = o['price'] / (1 + sell_pct / 100)
+                sell_orders.append({
+                    'id': o['id'],
+                    'price': o['price'],
+                    'amount': o['amount'],
+                    'buy_price': implied_buy,
+                    'retained_qty': 0.0,
+                })
+                order_mgr.set_order(symbol, 'sell', o['price'], o['amount'], o['id'], exchange=settings['exchange'])
+            if ex_buys:
+                b = ex_buys[0]
+                buy_order_id = b['id']
+                order_mgr.set_order(symbol, 'buy', b['price'], b['amount'], b['id'], exchange=settings['exchange'])
+            recovered = True
+            add_notification(symbol, f"Recovery: nastavljam s {len(ex_sells)} sell + {len(ex_buys)} buy ordera", 'success')
+            logger.info(f"[RECOVERY] {symbol}: {len(ex_sells)} sell, {len(ex_buys)} buy — nastavlja bez market buy")
+    except Exception as e:
+        logger.warning(f"[RECOVERY] {symbol}: nije mogao dohvatiti ordere, svježi start ({e})")
+
+    if not recovered:
+        cancel_all_orders()
 
     while bot_manager.is_running(pair_id):
         try:

@@ -71,61 +71,54 @@ class BotManager:
             return True
 
 
-def run_bot(symbol, pair_config, config, app=None, pair_id=None, bot_manager_instance=None):  # Added bot_manager_instance
+def run_bot(symbol, pair_config, config, app=None, pair_id=None, bot_manager_instance=None):
     """Run the trading loop for ``symbol`` using ``config`` settings."""
+    import time as _time
 
     context = app.app_context() if app else nullcontext()
     with context:
-        from main import trade_loop  # Imported here to avoid circular import
+        from main import trade_loop
         trading_mode = pair_config.get('trading_mode', config.get('trading_mode', 'testnet'))
-        # Determine if testnet mode is applicable for ExchangeConfig.setup_exchange
-        # It's testnet if mode is 'testnet'. ExchangeConfig handles Binance-specific URLs.
         is_testnet_mode_for_config = (trading_mode == 'testnet')
 
-        # Use ExchangeConfig to get standardized parameters
-        # api_keys_override can be passed if api_keys were loaded once and passed down,
-        # otherwise ExchangeConfig.setup_exchange will call load_api_keys() itself.
-        # For simplicity here, assuming ExchangeConfig calls load_api_keys.
         exchange_id, ccxt_params = ExchangeConfig.setup_exchange(
             pair_config['exchange'],
             is_testnet=is_testnet_mode_for_config
         )
-
-        # Create connector using the new signature
         exchange = ExchangeConnector(exchange_id, params=ccxt_params)
 
-        try:
-            trade_loop(
-                symbol,
-                pair_config,
-                exchange,
-                portfolio,
-                order_mgr,
-                trade_logger,
-                profit_tracker,
-                pair_id,
-            )
-            calculate_profit(exchange, trading_mode, symbol)
-            profit = profit_tracker.get_symbol_profit(symbol)
-            if profit >= 10.0:
-                add_notification(symbol, f'High profit trade for {symbol}: {profit:.2f} USDC', 'success')
-            elif profit <= -10.0:
-                add_notification(symbol, f'Significant loss for {symbol}: {profit:.2f} USDC', 'error')
-            add_notification(symbol, f'Trade cycle completed for {symbol}', 'success')
-        except Exception as e:
-            add_notification(symbol, f'Error: {str(e)}', 'error')
-        finally:
-            if pair_id is not None and bot_manager_instance is not None:
-                # Update state via the BotManager instance
-                with bot_manager_instance.lock:
-                    bot_manager_instance.bot_running[pair_id] = False
-                    bot_manager_instance.bot_threads.pop(pair_id, None)
+        MAX_RESTARTS = 20
+        restart_count = 0
+
+        # Watchdog petlja — ako trade_loop pukne, restarta se automatski
+        while bot_manager_instance.is_running(pair_id) and restart_count <= MAX_RESTARTS:
             try:
-                order_mgr.cancel_orders(symbol) # order_mgr is global
+                trade_loop(symbol, pair_config, exchange, portfolio, order_mgr, trade_logger, profit_tracker, pair_id)
+                # Normalni izlaz — bot je ručno zaustavljen
+                break
             except Exception as e:
-                # Log this error
-                if app: # if app context is available for logger
-                    app.logger.error(f"Error cancelling orders for {symbol} at end of run_bot: {e}", exc_info=True)
+                if not bot_manager_instance.is_running(pair_id):
+                    break  # Ručno zaustavljeno za vrijeme pada
+                restart_count += 1
+                delay = min(15 * restart_count, 120)
+                if app:
+                    app.logger.error(f"trade_loop crashed for {symbol} (restart {restart_count}/{MAX_RESTARTS}): {e}", exc_info=True)
+                add_notification(symbol, f'Bot pukao — restart za {delay}s (pokušaj {restart_count}/{MAX_RESTARTS})', 'error')
+                _time.sleep(delay)
+
+        if restart_count > MAX_RESTARTS:
+            add_notification(symbol, f'Bot za {symbol} stao nakon {MAX_RESTARTS} padova — provjeri logove', 'error')
+
+        # Cleanup
+        if pair_id is not None and bot_manager_instance is not None:
+            with bot_manager_instance.lock:
+                bot_manager_instance.bot_running[pair_id] = False
+                bot_manager_instance.bot_threads.pop(pair_id, None)
+        try:
+            order_mgr.cancel_orders(symbol)
+        except Exception as e:
+            if app:
+                app.logger.error(f"Error cancelling orders for {symbol} at end of run_bot: {e}", exc_info=True)
 
 
 def control_bot(config, app=None): # app is the flask_app_instance
