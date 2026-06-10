@@ -218,12 +218,24 @@ class ExchangeConnector:
                         side='buy',
                         amount=None,
                         price=None,
-                        params={'notional': notional_str} # Use the validated notional_str
+                        params={'notional': notional_str}
                     )
                     logger.debug(f"Order response for {symbol}: {order_response}")
                 except Exception as e:
                     logger.error(f"Market buy failed for {symbol} on {self.exchange_id} with notional amount {usdt_amount}: {e}", exc_info=True)
                     return None
+
+                # Bitmart notional orders often return filled=0 in immediate response —
+                # fetch the order to get actual fill data
+                if order_response and 'id' in order_response:
+                    time.sleep(0.8)
+                    try:
+                        fetched = self._api_call(self.exchange.fetch_order, order_response['id'], symbol)
+                        if fetched and fetched.get('filled', 0.0) > 0:
+                            order_response = fetched
+                            logger.info(f"Bitmart: fetched order {order_response['id']} — filled: {order_response.get('filled')}")
+                    except Exception as e:
+                        logger.warning(f"Bitmart: could not re-fetch order after market buy: {e}")
 
 
             elif self.exchange_id == 'gateio':
@@ -335,7 +347,7 @@ class ExchangeConnector:
                 'filled': (
                     filled_amount if filled_amount is not None and filled_amount > 0 else (
                         (usdt_amount / price_before_order)
-                        if price_before_order and price_before_order > 0 and self.exchange_id not in ['bitmart', 'gateio']
+                        if price_before_order and price_before_order > 0
                         else 0.0
                     )
                 ),
