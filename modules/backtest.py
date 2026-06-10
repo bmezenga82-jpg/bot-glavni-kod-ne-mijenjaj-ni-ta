@@ -22,6 +22,7 @@ def backtest(config):
             extras = [s.strip() for s in compare_raw.split(',') if s.strip()]
             all_symbols.extend(extras)
 
+        profit_mode = request.form.get('profit_mode', 'usdc')
         pairs = [
             {
                 'symbol': sym,
@@ -31,6 +32,7 @@ def backtest(config):
                 'buy_percentage': -abs(buy_percentage),
                 'sell_percentage': abs(sell_percentage),
                 'timeframe': timeframe,
+                'profit_mode': profit_mode,
             }
             for sym in all_symbols
         ]

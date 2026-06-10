@@ -151,8 +151,33 @@ export function runBacktest() {
                 resultText += `Unrealized P&L:      ${unreal.toFixed(4)} USDC`;
                 resultText += unreal >= 0 ? ' ✓\n' : ' ⚠ (pozicije ispod kupovne cijene)\n';
             }
+            if (result.profit_mode === 'crypto') {
+                resultText += `\n── Crypto Profit ───────────────────────\n`;
+                resultText += `Prikupljeno:         ${result.crypto_profit_qty} crypto\n`;
+                resultText += `Vrijednost sad:      ${result.crypto_value_usdc >= 0 ? '+' : ''}${result.crypto_value_usdc.toFixed(4)} USDC`;
+                resultText += ` (po ${result.last_price} USDC)\n`;
+                resultText += `USDC ekvivalent:     ${result.usdc_equivalent >= 0 ? '+' : ''}${result.usdc_equivalent.toFixed(4)} USDC`;
+                resultText += ` (da je USDC mod)\n`;
+                const diff = result.crypto_value_usdc - result.usdc_equivalent;
+                resultText += `Razlika:             ${diff >= 0 ? '+' : ''}${diff.toFixed(4)} USDC`;
+                resultText += diff >= 0 ? ' ✓ (crypto isplativije)\n' : ' ⚠ (cijena pala, USDC mod bi bio bolji)\n';
+                // Break-even kalkulator
+                if (result.crypto_profit_qty > 0 && result.usdc_equivalent > 0 && result.last_price > 0) {
+                    const breakEven = result.usdc_equivalent / result.crypto_profit_qty;
+                    const breakEvenPct = ((breakEven / result.last_price) - 1) * 100;
+                    resultText += `Break-even cijena:   ${breakEven.toFixed(4)} USDC/token`;
+                    if (breakEvenPct > 0)
+                        resultText += ` (potreban rast +${breakEvenPct.toFixed(1)}%)\n`;
+                    else
+                        resultText += ` (već pokriveno! ${breakEvenPct.toFixed(1)}%)\n`;
+                }
+            }
+
             resultText += `\n── UKUPNO ──────────────────────────────\n`;
-            if (result.total_pnl != null) {
+            if (result.profit_mode === 'crypto') {
+                const total = result.crypto_value_usdc + (result.unrealized_pnl ?? 0);
+                resultText += `Total P&L (crypto):  ${total >= 0 ? '+' : ''}${total.toFixed(4)} USDC\n`;
+            } else if (result.total_pnl != null) {
                 const total = result.total_pnl;
                 resultText += `Total P&L:           ${total.toFixed(4)} USDC`;
                 if (result.total_roi_pct != null) resultText += ` (${result.total_roi_pct.toFixed(2)}% ROI)`;
@@ -163,6 +188,25 @@ export function runBacktest() {
                 resultText += ` (za ${result.period_days} dana)\n`;
             }
             resultText += `═══════════════════════════════════════\n`;
+
+            // Pregled po mjesecima
+            if (result.monthly_breakdown) {
+                const months = Object.entries(result.monthly_breakdown);
+                if (months.length > 0) {
+                    resultText += `\n── Pregled po mjesecima ────────────────\n`;
+                    resultText += `Mj.        Profit (USDC)    Trades\n`;
+                    resultText += `────────────────────────────────────────\n`;
+                    let mTotal = 0;
+                    months.forEach(([m, d]) => {
+                        const p = d.profit;
+                        mTotal += p;
+                        const pStr = (p >= 0 ? '+' : '') + p.toFixed(2);
+                        resultText += `${m}   ${pStr.padEnd(16)} ${d.trades}\n`;
+                    });
+                    resultText += `────────────────────────────────────────\n`;
+                    resultText += `UKUPNO     ${((mTotal >= 0 ? '+' : '') + mTotal.toFixed(2)).padEnd(16)}\n`;
+                }
+            }
 
             // trade log — samo ako je checkbox uključen
             if (showLog && result.trade_log && result.trade_log.length) {

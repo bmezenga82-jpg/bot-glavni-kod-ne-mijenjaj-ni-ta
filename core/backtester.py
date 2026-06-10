@@ -1,4 +1,5 @@
 import datetime
+from collections import defaultdict
 import ccxt  # type: ignore
 
 FEE_RATE = 0.001  # 0.1% per trade (Binance standard)
@@ -20,20 +21,13 @@ def _fetch_ohlcv(exchange, symbol, timeframe, since, until):
     return ohlcv
 
 
-def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_capital=None):
+def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_capital=None, profit_mode='usdc'):
     """
     Simulate the bot's cyclic grid strategy against historical OHLCV data.
 
-    Strategy (matches main.py trade_loop):
-    - Market buy to start each cycle at candle open
-    - Place limit sell at entry * (1 + sell_pct/100)
-    - Place limit buy at entry * (1 - buy_pct/100)
-    - On buy fill: add new lot, place new sell above + new buy even lower
-    - On any sell fill: cancel buy, place new buy if more sells remain; else restart
-
-    total_capital: total available USDC (defaults to amount if not provided).
-    buy_pct and sell_pct are positive percentages (e.g. 2.0 = 2%).
-    Uses candle high/low for fill detection.
+    profit_mode='usdc'  : prodaje sve, profit u USDC.
+    profit_mode='crypto': prodaje samo toliko da pokrije USDC ulog, ostatak ostaje kao crypto.
+                          Prati crypto_profit_qty i usdc_equivalent (usporedba s USDC modom).
     """
     balance = total_capital if total_capital is not None else amount
     starting_capital = balance
@@ -43,6 +37,9 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
     net_profit = 0.0
     trade_count = 0
     trade_log = []
+    crypto_profit_qty = 0.0  # akumulirani crypto profit (samo crypto mod)
+    usdc_equivalent = 0.0    # što bi profit bio u USDC modu (za usporedbu)
+    monthly = defaultdict(lambda: {'profit': 0.0, 'trades': 0})
 
     for candle in ohlcv:
         _, open_p, high, low, _close, _ = candle
@@ -84,15 +81,34 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
         # Check sell order fills using candle high
         filled = [s for s in sell_orders if high >= s['price']]
         for s in filled:
-            proceeds = s['qty'] * s['price'] * (1 - fee_rate)
-            profit = proceeds - s['cost']
+            full_proceeds = s['qty'] * s['price'] * (1 - fee_rate)
+            trade_usdc_profit = full_proceeds - s['cost']  # profit ovog trejda u USDC modu
+            usdc_equivalent += trade_usdc_profit
+
+            if profit_mode == 'crypto':
+                sell_qty = s['cost'] / (s['price'] * (1 - fee_rate))
+                sell_qty = min(sell_qty, s['qty'])
+                retained = s['qty'] - sell_qty
+                proceeds = sell_qty * s['price'] * (1 - fee_rate)  # ≈ s['cost']
+                profit = proceeds - s['cost']  # ≈ 0
+                crypto_profit_qty += retained
+                trade_log.append(
+                    f'[{date}] SELL (crypto) {sell_qty:.5f} @ {s["price"]:.4f} | Zadržano: {retained:.6f} crypto | Balance: {balance + proceeds:.4f}'
+                )
+            else:
+                proceeds = full_proceeds
+                profit = trade_usdc_profit
+                trade_log.append(
+                    f'[{date}] SELL        {s["qty"]:.5f} @ {s["price"]:.4f} | Profit: {profit:+.4f} | Balance: {balance + proceeds:.4f}'
+                )
+
             net_profit += profit
             balance += proceeds
             trade_count += 1
             sell_orders.remove(s)
-            trade_log.append(
-                f'[{date}] SELL        {s["qty"]:.5f} @ {s["price"]:.4f} | Profit: {profit:+.4f} | Balance: {balance:.4f}'
-            )
+            month = date[:7]
+            monthly[month]['profit'] += trade_usdc_profit if profit_mode == 'crypto' else profit
+            monthly[month]['trades'] += 1
 
         if filled:
             # Cancel current buy order after any sell fills (matches main.py behaviour)
@@ -117,11 +133,14 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
         unrealized_pnl += current_value - s['cost']
         total_invested_open += s['cost']
 
+    crypto_value_usdc = round(crypto_profit_qty * last_close * (1 - fee_rate), 4) if profit_mode == 'crypto' else 0.0
+
     total_pnl = net_profit + unrealized_pnl
     roi_pct = round(net_profit / starting_capital * 100, 2) if starting_capital > 0 else 0.0
     total_roi_pct = round(total_pnl / starting_capital * 100, 2) if starting_capital > 0 else 0.0
 
     return {
+        'profit_mode': profit_mode,
         'net_profit': round(net_profit, 4),
         'roi_pct': roi_pct,
         'unrealized_pnl': round(unrealized_pnl, 4),
@@ -132,6 +151,10 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
         'last_price': round(last_close, 6),
         'trade_count': trade_count,
         'total_capital': starting_capital,
+        'crypto_profit_qty': round(crypto_profit_qty, 8),
+        'crypto_value_usdc': crypto_value_usdc,
+        'usdc_equivalent': round(usdc_equivalent, 4),
+        'monthly_breakdown': dict(sorted(monthly.items())),
         'trade_log': trade_log,
     }
 
@@ -173,7 +196,8 @@ def run_backtest(pairs, start_date=None, end_date=None):
             results[symbol] = {'net_profit': 0, 'roi_pct': 0, 'trade_count': 0, 'total_capital': total_capital, 'trade_log': ['No data available for this range.']}
             continue
 
-        result = _simulate_grid(ohlcv, amount, buy_pct, sell_pct, total_capital=total_capital)
+        profit_mode = pair.get('profit_mode', 'usdc')
+        result = _simulate_grid(ohlcv, amount, buy_pct, sell_pct, total_capital=total_capital, profit_mode=profit_mode)
         result['candles'] = len(ohlcv)
         result['timeframe'] = timeframe
 

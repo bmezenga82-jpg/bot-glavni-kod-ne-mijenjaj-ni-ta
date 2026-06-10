@@ -40,7 +40,12 @@ export function updateData() {
             const ordersTable = document.getElementById('orders-body');
             if (ordersTable) {
                 ordersTable.innerHTML = '';
+                const prices = data.prices || {};
                 for (const [symbol, orders] of Object.entries(data.orders)) {
+                    const sellOrder = orders['sell'];
+                    const buyOrder  = orders['buy'];
+                    const currentPrice = prices[symbol];
+
                     for (const [side, details] of Object.entries(orders)) {
                         const row = document.createElement('tr');
                         row.innerHTML = `
@@ -51,6 +56,13 @@ export function updateData() {
                             <td class="text-end">${details.amount}</td>
                             <td class="text-end">${details.price}</td>`;
                         ordersTable.appendChild(row);
+                    }
+
+                    // Grid viz — samo ako imamo i sell i buy nalog i trenutnu cijenu
+                    if (sellOrder && buyOrder && currentPrice) {
+                        const vizRow = document.createElement('tr');
+                        vizRow.innerHTML = `<td colspan="6" style="padding:4px 8px 8px 8px;">${buildOrderGridViz(symbol, sellOrder, buyOrder, currentPrice)}</td>`;
+                        ordersTable.appendChild(vizRow);
                     }
                 }
             }
@@ -292,6 +304,40 @@ function renderPairProfits(grouped) {
             if (cryptoSpan) cryptoSpan.textContent = totalCrypto.toFixed(6);
         }
     });
+}
+
+function buildOrderGridViz(symbol, sellOrder, buyOrder, currentPrice) {
+    const sellPrice = Number(sellOrder.price);
+    const buyPrice  = Number(buyOrder.price);
+    const cur       = Number(currentPrice);
+    if (!sellPrice || !buyPrice || !cur) return '';
+
+    const minP  = buyPrice  * 0.998;
+    const maxP  = sellPrice * 1.002;
+    const range = maxP - minP || 1;
+    const BAR_W = 160;
+    const px = (p) => Math.round(((p - minP) / range) * BAR_W);
+
+    const sellPct = ((sellPrice - cur) / cur * 100).toFixed(2);
+    const buyPct  = ((buyPrice  - cur) / cur * 100).toFixed(2);
+
+    const line = (price, color, label, pct) => {
+        const pos = px(price);
+        return `<div style="display:flex;align-items:center;margin-bottom:3px;">
+            <div style="width:78px;text-align:right;color:${color};font-size:0.72rem;margin-right:6px;">$${Number(price).toFixed(4)}</div>
+            <div style="position:relative;width:${BAR_W}px;height:11px;background:#1a1d20;border-radius:2px;">
+                <div style="position:absolute;left:${pos}px;top:0;width:2px;height:100%;background:${color};"></div>
+            </div>
+            <div style="margin-left:8px;color:${color};font-size:0.7rem;white-space:nowrap;">${label} ${pct}%</div>
+        </div>`;
+    };
+
+    return `<div style="font-family:monospace;font-size:0.75rem;background:rgba(0,0,0,0.2);padding:6px 8px;border-radius:4px;">
+        <div style="color:#6c757d;margin-bottom:4px;font-size:0.7rem;">⬥ ${symbol} grid</div>
+        ${line(sellPrice, '#dc3545', '▲ SELL', '+' + sellPct)}
+        ${line(cur,       '#0d6efd', '● NOW',  '')}
+        ${line(buyPrice,  '#198754', '▼ BUY',  buyPct)}
+    </div>`;
 }
 
 function renderOpenPositions(list) {
