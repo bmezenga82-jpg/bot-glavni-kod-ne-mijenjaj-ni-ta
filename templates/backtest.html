@@ -12,7 +12,7 @@
         <form id="backtest-form">
             <div class="mb-2">
                 <label for="symbol" class="form-label mb-1">Trading Pair</label>
-                <select class="form-control form-control-sm" id="symbol" name="symbol" required>
+                <select class="form-control form-control-sm" id="symbol" name="symbol" required onchange="updateCompareList()">
                     {% for pair in pairs %}
                     <option value="{{ pair.symbol }}">{{ pair.symbol }}</option>
                     {% endfor %}
@@ -74,13 +74,33 @@
             </div>
 
             <div class="mb-3">
-                <label for="compare_symbols" class="form-label mb-1">
+                <label class="form-label mb-1">
                     Usporedi parove
-                    <small class="text-muted">— odvojeno zarezom, samo za <strong>Run Backtest</strong></small>
+                    <small class="text-muted">— samo za Run Backtest</small>
                 </label>
-                <input type="text" class="form-control form-control-sm" id="compare_symbols" name="compare_symbols" placeholder="ETH/USDC, BNB/USDC">
+                <div id="compare-pairs-list" style="max-height:110px; overflow-y:auto; border:1px solid #495057; border-radius:4px; padding:6px 8px;">
+                    {% for pair in pairs %}
+                    <div class="form-check mb-0" id="cb-wrap-{{ loop.index }}">
+                        <input class="form-check-input compare-pair-cb" type="checkbox"
+                               value="{{ pair.symbol }}" id="cb_cmp_{{ loop.index }}">
+                        <label class="form-check-label" for="cb_cmp_{{ loop.index }}" style="font-size:0.87rem;">
+                            {{ pair.symbol }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <input type="hidden" id="compare_symbols" name="compare_symbols">
             </div>
 
+            <div class="mb-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="normalize_amount" name="normalize_amount" checked>
+                    <label class="form-check-label" style="font-size:0.87rem;">
+                        Fer usporedba — skaliraj iznos s buy%
+                        <small class="text-muted d-block" style="font-size:0.78rem;">0.8%→80, 1%→100, 2%→200 USDC (samo za Optimize)</small>
+                    </label>
+                </div>
+            </div>
             <div class="mb-2">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="show_trade_log">
@@ -151,7 +171,21 @@ function updateCapitalCalc() {
             : ` <span class="text-success">✓</span>`);
 }
 
-document.addEventListener('DOMContentLoaded', updateCapitalCalc);
+function updateCompareList() {
+    const primary = document.getElementById('symbol').value;
+    document.querySelectorAll('.compare-pair-cb').forEach(cb => {
+        const wrap = cb.closest('.form-check');
+        const isPrimary = cb.value === primary;
+        cb.disabled = isPrimary;
+        if (isPrimary) cb.checked = false;
+        wrap.style.opacity = isPrimary ? '0.35' : '1';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateCapitalCalc();
+    updateCompareList();
+});
 </script>
 {% endblock %}
 

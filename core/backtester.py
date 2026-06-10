@@ -200,16 +200,21 @@ def run_backtest(pairs, start_date=None, end_date=None):
     return results
 
 
-def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=None, top_n=5):
+def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=None, top_n=5, normalize_amount=False):
     """
-    Test all buy/sell % combinations and return the top_n by total P&L
-    (realized profit + unrealized P&L on open positions).
+    Test all buy/sell % combinations and return the top_n by total P&L.
+
+    normalize_amount=True: scale per-trade amount so all combos cover the same
+    downside % with the same total capital. Reference point = pair['buy_pct_ref']
+    and pair['amount']. E.g. 300 USDC at 3% ref → 0.8% uses 80 USDC.
+    Formula: amount = ref_amount * (tested_buy_pct / ref_buy_pct)
     """
     symbol = pair['symbol']
     exchange_name = pair['exchange']
-    amount = pair['amount']
+    base_amount = pair['amount']
+    ref_buy_pct = pair.get('buy_pct_ref', 1.0)
     timeframe = pair.get('timeframe', '1h')
-    total_capital = pair.get('total_capital', amount)
+    total_capital = pair.get('total_capital', base_amount)
 
     print(f"[OPTIMIZER] {symbol} on {exchange_name} — testing {len(buy_range) * len(sell_range)} combinations...")
 
@@ -244,6 +249,9 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
     results = []
 
     for buy_pct in buy_range:
+        # amount = ref_amount * (tested_pct / ref_pct): npr. 300 USDC pri 3% → 0.8% daje 80 USDC
+        amount = round(base_amount * abs(buy_pct) / ref_buy_pct, 2) if normalize_amount else base_amount
+        amount = max(amount, 1.0)
         for sell_pct in sell_range:
             r = _simulate_grid(ohlcv, amount, abs(buy_pct), abs(sell_pct), total_capital=total_capital)
             ann = None
@@ -252,6 +260,7 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
             results.append({
                 'buy_pct': buy_pct,
                 'sell_pct': sell_pct,
+                'amount': round(amount, 2),
                 'total_pnl': r['total_pnl'],
                 'net_profit': r['net_profit'],
                 'unrealized_pnl': r['unrealized_pnl'],

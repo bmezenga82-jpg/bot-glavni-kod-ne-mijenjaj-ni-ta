@@ -82,9 +82,20 @@ export function setupPairSelector(selected) {
 
 export function runBacktest() {
     const form = document.getElementById('backtest-form');
-    const formData = new FormData(form);
     const showLog = document.getElementById('show_trade_log')?.checked;
     const resultsEl = document.getElementById('backtest-results');
+
+    // Kolektirati checkboxove, izostaviti primarni par
+    const primary = document.getElementById('symbol')?.value;
+    const compareSymbols = [...document.querySelectorAll('.compare-pair-cb:checked')]
+        .map(cb => cb.value)
+        .filter(s => s !== primary)
+        .join(',');
+
+    // FormData se gradi NAKON što imamo compare listu
+    const formData = new FormData(form);
+    formData.set('compare_symbols', compareSymbols);
+
     resultsEl.textContent = 'Učitavanje...';
 
     fetch('/backtest', { method: 'POST', body: formData })
@@ -207,18 +218,24 @@ export function runOptimize() {
             const sd = m.start_date || '2023-01-01 (default)';
             const ed = m.end_date   || 'danas (default)';
             text += `Period:    ${sd} → ${ed} (${m.timeframe})\n`;
-            text += `Per-trade: ${m.amount} USDC  |  Kapital: ${m.total_capital} USDC\n`;
+            if (m.normalize_amount) {
+                text += `Iznos:     SKALIRAN — referenca ${m.amount} USDC pri ${m.buy_pct_ref}%  |  Kapital: ${m.total_capital} USDC\n`;
+                text += `           → npr. 0.8% koristi ${(m.amount * 0.8 / m.buy_pct_ref).toFixed(0)} USDC, 2% koristi ${(m.amount * 2 / m.buy_pct_ref).toFixed(0)} USDC\n`;
+            } else {
+                text += `Per-trade: ${m.amount} USDC (fiksno)  |  Kapital: ${m.total_capital} USDC\n`;
+            }
         }
         text += '\n';
         data.top_combos.forEach((c, i) => {
             const sign = c.total_pnl >= 0 ? '+' : '';
-            text += `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%\n`;
+            const amtStr = c.amount != null ? ` [iznos: ${c.amount} USDC]` : '';
+            text += `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%${amtStr}\n`;
             text += `     Ukupni P&L:      ${sign}${c.total_pnl.toFixed(4)} USDC (${c.roi_pct.toFixed(2)}% ROI)\n`;
             if (c.annualized_roi != null)
                 text += `     Godišnji ROI:    ${c.annualized_roi >= 0 ? '+' : ''}${c.annualized_roi.toFixed(2)}% / god\n`;
             text += `     Realizirano:     ${c.net_profit >= 0 ? '+' : ''}${c.net_profit.toFixed(4)} USDC\n`;
             text += `     Nerealizirano:   ${c.unrealized_pnl >= 0 ? '+' : ''}${c.unrealized_pnl.toFixed(4)} USDC\n`;
-            text += `     Zatvorenih trades: ${c.trade_count}   |   Otvorenih pozicija: ${c.open_positions}\n`;
+            text += `     Trades: ${c.trade_count}   |   Otvorenih pozicija: ${c.open_positions}\n`;
             text += '\n';
         });
         text += '═══════════════════════════════════════════════════\n';

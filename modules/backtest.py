@@ -52,14 +52,18 @@ def optimize():
     buy_range = [-round(x * 0.2, 1) for x in range(1, 16)]   # -0.2% to -3.0%
     sell_range = [round(x * 0.2, 1) for x in range(1, 16)]   # +0.2% to +3.0%
 
+    buy_percentage = abs(float(request.form.get('buy_percentage', 1.0)))
+    normalize_amount = 'normalize_amount' in request.form
+
     pair = {
         'symbol': symbol,
         'exchange': exchange,
         'amount': amount,
+        'buy_pct_ref': buy_percentage,  # referentni postotak za skaliranje iznosa
         'total_capital': total_capital,
         'timeframe': timeframe,
     }
-    top_combos = optimize_strategy(pair, buy_range, sell_range, start_date, end_date, top_n=5)
+    top_combos = optimize_strategy(pair, buy_range, sell_range, start_date, end_date, top_n=5, normalize_amount=normalize_amount)
     if not top_combos:
         return jsonify({'error': 'Could not fetch data or no results'}), 500
     return jsonify({
@@ -71,6 +75,8 @@ def optimize():
             'end_date': end_date,
             'timeframe': timeframe,
             'amount': amount,
+            'buy_pct_ref': buy_percentage,
             'total_capital': total_capital,
+            'normalize_amount': normalize_amount,
         }
     })
