@@ -83,43 +83,150 @@ export function setupPairSelector(selected) {
 export function runBacktest() {
     const form = document.getElementById('backtest-form');
     const formData = new FormData(form);
-    fetch('/backtest', {
-        method: 'POST',
-        body: formData
-    })
+    const showLog = document.getElementById('show_trade_log')?.checked;
+    const resultsEl = document.getElementById('backtest-results');
+    resultsEl.textContent = 'Učitavanje...';
+
+    fetch('/backtest', { method: 'POST', body: formData })
     .then(response => response.json())
     .then(data => {
-        if (data.results) {
-            let resultText = '';
-            for (const [symbol, result] of Object.entries(data.results)) {
-                resultText += `Symbol: ${symbol}\n`;
-                resultText += `Net Profit: ${result.net_profit.toFixed(2)} USDC\n`;
-                resultText += 'Trade Log:\n';
-                result.trade_log.forEach(log => resultText += `  ${log}\n`);
-                resultText += '\n';
-            }
-            document.getElementById('backtest-results').textContent = resultText;
-        } else {
-            document.getElementById('backtest-results').textContent = 'No results available.';
+        if (!data.results) {
+            resultsEl.textContent = 'No results available.';
+            return;
         }
+
+        const entries = Object.entries(data.results);
+        let resultText = '';
+
+        // ── Usporedna tablica (samo kad ima više parova) ──────
+        if (entries.length > 1) {
+            const pad = (s, w) => String(s).padEnd(w);
+            resultText += `════ USPOREDBA PAROVA ════════════════════════════\n`;
+            resultText += `${pad('Par', 14)} ${pad('P&L ukupno', 15)} ${pad('God. ROI', 12)} Trades  Otvoreno\n`;
+            resultText += `──────────────────────────────────────────────────\n`;
+            for (const [sym, r] of entries) {
+                const pnl  = r.total_pnl != null
+                    ? `${r.total_pnl >= 0 ? '+' : ''}${r.total_pnl.toFixed(2)} USDC`
+                    : 'N/A';
+                const roi  = r.annualized_roi != null
+                    ? `${r.annualized_roi >= 0 ? '+' : ''}${r.annualized_roi.toFixed(1)}%/god`
+                    : 'N/A';
+                resultText += `${pad(sym, 14)} ${pad(pnl, 15)} ${pad(roi, 12)} ${pad(r.trade_count ?? '-', 8)} ${r.open_positions ?? '-'}\n`;
+            }
+            resultText += `══════════════════════════════════════════════════\n\n`;
+        }
+
+        // ── Detalji po paru ───────────────────────────────────
+        for (const [symbol, result] of entries) {
+            resultText += `═══════════════════════════════════════\n`;
+            resultText += `Symbol:              ${symbol}\n`;
+            if (result.total_capital != null)
+                resultText += `Total Capital:       ${result.total_capital.toFixed(2)} USDC\n`;
+            if (result.candles)
+                resultText += `Period analysed:     ${result.candles} candles (${result.timeframe})\n`;
+            if (result.last_price != null)
+                resultText += `Last price:          ${result.last_price} USDC\n`;
+            resultText += `\n`;
+            resultText += `── Realized (closed trades) ────────────\n`;
+            resultText += `Trades completed:    ${result.trade_count ?? 'N/A'}\n`;
+            resultText += `Realized Profit:     ${result.net_profit.toFixed(4)} USDC`;
+            if (result.roi_pct != null) resultText += ` (${result.roi_pct.toFixed(2)}% ROI)`;
+            resultText += '\n\n';
+            resultText += `── Open positions (end of period) ──────\n`;
+            if (result.open_positions != null) {
+                resultText += `Open lots:           ${result.open_positions}\n`;
+                resultText += `Capital in open:     ${(result.total_invested_open ?? 0).toFixed(2)} USDC\n`;
+                const unreal = result.unrealized_pnl ?? 0;
+                resultText += `Unrealized P&L:      ${unreal.toFixed(4)} USDC`;
+                resultText += unreal >= 0 ? ' ✓\n' : ' ⚠ (pozicije ispod kupovne cijene)\n';
+            }
+            resultText += `\n── UKUPNO ──────────────────────────────\n`;
+            if (result.total_pnl != null) {
+                const total = result.total_pnl;
+                resultText += `Total P&L:           ${total.toFixed(4)} USDC`;
+                if (result.total_roi_pct != null) resultText += ` (${result.total_roi_pct.toFixed(2)}% ROI)`;
+                resultText += total >= 0 ? ' ✓\n' : ' ⚠\n';
+            }
+            if (result.annualized_roi != null && result.period_days != null) {
+                resultText += `Godišnji ROI:        ${result.annualized_roi >= 0 ? '+' : ''}${result.annualized_roi.toFixed(2)}% / god`;
+                resultText += ` (za ${result.period_days} dana)\n`;
+            }
+            resultText += `═══════════════════════════════════════\n`;
+
+            // trade log — samo ako je checkbox uključen
+            if (showLog && result.trade_log && result.trade_log.length) {
+                resultText += `\nTrade Log (${result.trade_log.length} entries):\n`;
+                result.trade_log.forEach(log => resultText += `  ${log}\n`);
+            } else if (result.trade_log) {
+                resultText += `[Trade log: ${result.trade_log.length} unosa — uključi checkbox za prikaz]\n`;
+            }
+            resultText += '\n';
+        }
+
+        resultsEl.textContent = resultText;
     })
     .catch(error => {
-        document.getElementById('backtest-results').textContent = 'Error running backtest: ' + error;
+        resultsEl.textContent = 'Error running backtest: ' + error;
     });
 }
 
 export function runOptimize() {
     const form = document.getElementById('backtest-form');
+    const resultsEl = document.getElementById('backtest-results');
+
+    const startDate = document.getElementById('start_date')?.value;
+    const endDate   = document.getElementById('end_date')?.value;
+    if (!startDate || !endDate) {
+        resultsEl.textContent =
+            '⚠ Molim postavi Start Date i End Date prije optimizacije.\n' +
+            'Bez datuma optimizer koristi period od 2023-01-01 do danas (~3 godine),\n' +
+            'što može trajati nekoliko minuta.';
+        return;
+    }
+
     const formData = new FormData(form);
+    resultsEl.textContent = 'Optimizing... (ovo može potrajati 30-60 sekundi za duži period)';
     fetch('/optimize', {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
     .then(data => {
-        document.getElementById('backtest-results').textContent = `Best Buy Percentage: ${data.best_buy_percentage}%\nBest Sell Percentage: ${data.best_sell_percentage}%`;
+        if (data.error) {
+            resultsEl.textContent = 'Greška: ' + data.error;
+            return;
+        }
+        if (!data.top_combos || !data.top_combos.length) {
+            resultsEl.textContent = 'Nema rezultata.';
+            return;
+        }
+        const m = data.meta || {};
+        let text = '═══ TOP 5 KOMBINACIJA (sortirano po ukupnom P&L) ═══\n';
+        if (m.symbol) {
+            text += `Valuta:    ${m.symbol} na ${m.exchange}\n`;
+            const sd = m.start_date || '2023-01-01 (default)';
+            const ed = m.end_date   || 'danas (default)';
+            text += `Period:    ${sd} → ${ed} (${m.timeframe})\n`;
+            text += `Per-trade: ${m.amount} USDC  |  Kapital: ${m.total_capital} USDC\n`;
+        }
+        text += '\n';
+        data.top_combos.forEach((c, i) => {
+            const sign = c.total_pnl >= 0 ? '+' : '';
+            text += `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%\n`;
+            text += `     Ukupni P&L:      ${sign}${c.total_pnl.toFixed(4)} USDC (${c.roi_pct.toFixed(2)}% ROI)\n`;
+            if (c.annualized_roi != null)
+                text += `     Godišnji ROI:    ${c.annualized_roi >= 0 ? '+' : ''}${c.annualized_roi.toFixed(2)}% / god\n`;
+            text += `     Realizirano:     ${c.net_profit >= 0 ? '+' : ''}${c.net_profit.toFixed(4)} USDC\n`;
+            text += `     Nerealizirano:   ${c.unrealized_pnl >= 0 ? '+' : ''}${c.unrealized_pnl.toFixed(4)} USDC\n`;
+            text += `     Zatvorenih trades: ${c.trade_count}   |   Otvorenih pozicija: ${c.open_positions}\n`;
+            text += '\n';
+        });
+        text += '═══════════════════════════════════════════════════\n';
+        text += 'Savjet: odaberi kombinaciju s najboljim ukupnim P&L\n';
+        text += 'ali pazi na broj otvorenih pozicija (potencijalni gubitak u bear marketu).\n';
+        resultsEl.textContent = text;
     })
     .catch(error => {
-        document.getElementById('backtest-results').textContent = 'Error running optimization: ' + error;
+        resultsEl.textContent = 'Greška: ' + error;
     });
 }

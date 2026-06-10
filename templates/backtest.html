@@ -2,61 +2,157 @@
 
 {% block content %}
 
-<div class="row">
-<div class="col-lg-6">
-<div class="card mb-4">
+<div class="row g-3" style="height: calc(100vh - 120px);">
+
+{# ── LEFT: form ──────────────────────────────────────── #}
+<div class="col-xl-4 col-lg-5 d-flex flex-column" style="height:100%; overflow-y:auto;">
+<div class="card flex-grow-1">
     <div class="card-header">Backtest Parameters</div>
     <div class="card-body">
         <form id="backtest-form">
-            <div class="mb-3">
-                <label for="symbol" class="form-label">Trading Pair</label>
-                <select class="form-control" id="symbol" name="symbol" required>
+            <div class="mb-2">
+                <label for="symbol" class="form-label mb-1">Trading Pair</label>
+                <select class="form-control form-control-sm" id="symbol" name="symbol" required>
                     {% for pair in pairs %}
                     <option value="{{ pair.symbol }}">{{ pair.symbol }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="mb-3">
-                <label for="exchange" class="form-label">Exchange</label>
-                <select class="form-control" id="exchange" name="exchange">
+            <div class="mb-2">
+                <label for="exchange" class="form-label mb-1">Exchange</label>
+                <select class="form-control form-control-sm" id="exchange" name="exchange">
                     {% for ex in exchanges %}
                     <option value="{{ ex }}">{{ ex }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="mb-3">
-                <label for="start_date" class="form-label">Start Date</label>
-                <input type="date" class="form-control" id="start_date" name="start_date" required>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label for="start_date" class="form-label mb-1">Start Date</label>
+                    <input type="date" class="form-control form-control-sm" id="start_date" name="start_date" required>
+                </div>
+                <div class="col-6">
+                    <label for="end_date" class="form-label mb-1">End Date</label>
+                    <input type="date" class="form-control form-control-sm" id="end_date" name="end_date" required>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="end_date" class="form-label">End Date</label>
-                <input type="date" class="form-control" id="end_date" name="end_date" required>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label for="buy_percentage" class="form-label mb-1">Buy %</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="buy_percentage" name="buy_percentage" value="2.0" required oninput="updateCapitalCalc()">
+                </div>
+                <div class="col-6">
+                    <label for="sell_percentage" class="form-label mb-1">Sell %</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="sell_percentage" name="sell_percentage" value="3.0" required>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="buy_percentage" class="form-label">Buy Percentage (%)</label>
-                <input type="number" step="0.01" class="form-control" id="buy_percentage" name="buy_percentage" value="2.0" required>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label for="amount" class="form-label mb-1">Per-trade (USDC)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="amount" name="amount" value="100.0" required oninput="updateCapitalDefault(); updateCapitalCalc()">
+                </div>
+                <div class="col-6">
+                    <label for="total_capital" class="form-label mb-1">Kapital (USDC)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="total_capital" name="total_capital" value="500.0" required oninput="updateCapitalCalc()">
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="sell_percentage" class="form-label">Sell Percentage (%)</label>
-                <input type="number" step="0.01" class="form-control" id="sell_percentage" name="sell_percentage" value="3.0" required>
+
+            {# capital calculator #}
+            <div class="mb-2 p-2 border rounded" style="background:rgba(0,0,0,0.15); font-size:0.84rem; line-height:1.6">
+                <small class="text-muted d-block">Kalkulator pokrivenosti</small>
+                <div id="calc-result"></div>
             </div>
-            <div class="mb-3">
-                <label for="amount" class="form-label">Initial Amount (USDC)</label>
-                <input type="number" step="0.01" class="form-control" id="amount" name="amount" value="100.0" required>
+
+            <div class="mb-2">
+                <label for="timeframe" class="form-label mb-1">Timeframe</label>
+                <select class="form-control form-control-sm" id="timeframe" name="timeframe">
+                    <option value="1h" selected>1h (recommended)</option>
+                    <option value="4h">4h</option>
+                    <option value="15m">15m</option>
+                    <option value="1d">1d</option>
+                </select>
             </div>
-            <button type="button" class="btn btn-primary" onclick="runBacktest()">Run Backtest</button>
-            <button type="button" class="btn btn-primary" onclick="runOptimize()">Optimize Parameters</button>
+
+            <div class="mb-3">
+                <label for="compare_symbols" class="form-label mb-1">
+                    Usporedi parove
+                    <small class="text-muted">— odvojeno zarezom, samo za <strong>Run Backtest</strong></small>
+                </label>
+                <input type="text" class="form-control form-control-sm" id="compare_symbols" name="compare_symbols" placeholder="ETH/USDC, BNB/USDC">
+            </div>
+
+            <div class="mb-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="show_trade_log">
+                    <label class="form-check-label" style="font-size:0.87rem;">Prikaži trade log</label>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary btn-sm flex-fill" onclick="runBacktest()">Run Backtest</button>
+                <button type="button" class="btn btn-secondary btn-sm flex-fill" onclick="runOptimize()">Optimize</button>
+            </div>
         </form>
     </div>
 </div>
 </div>
-<div class="col-lg-6">
-<div class="card">
-    <div class="card-header">Results</div>
-    <div class="card-body">
-        <pre id="backtest-results">Results will appear here...</pre>
+
+{# ── RIGHT: results ───────────────────────────────────── #}
+<div class="col-xl-8 col-lg-7 d-flex flex-column" style="height:100%;">
+<div class="card flex-grow-1 d-flex flex-column" style="min-height:0;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Results</span>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('backtest-results').textContent='Results will appear here...'">Clear</button>
+    </div>
+    <div class="card-body p-2 flex-grow-1" style="min-height:0; overflow:hidden;">
+        <pre id="backtest-results" style="height:100%; overflow-y:auto; margin:0; font-size:0.82rem; white-space:pre-wrap; word-wrap:break-word; line-height:1.5;">Results will appear here...</pre>
     </div>
 </div>
 </div>
+
 </div>
+
+{% block scripts %}
+<script>
+function updateCapitalDefault() {
+    const amount = parseFloat(document.getElementById('amount').value) || 100;
+    const capital = document.getElementById('total_capital');
+    if (!capital.dataset.manuallyChanged) {
+        capital.value = (amount * 5).toFixed(2);
+    }
+}
+document.getElementById('total_capital').addEventListener('input', function() {
+    this.dataset.manuallyChanged = '1';
+});
+
+function updateCapitalCalc() {
+    const amount  = parseFloat(document.getElementById('amount').value)         || 100;
+    const buyPct  = Math.abs(parseFloat(document.getElementById('buy_percentage').value) || 1);
+    const capital = parseFloat(document.getElementById('total_capital').value)  || 500;
+    const el      = document.getElementById('calc-result');
+
+    if (buyPct <= 0 || buyPct >= 100) { el.innerHTML = ''; return; }
+
+    const step      = 1 - buyPct / 100;
+    const totalLvl  = Math.floor(capital / amount);
+    const lvlsBelow = Math.max(0, totalLvl - 1);
+    const pctCov    = (1 - Math.pow(step, lvlsBelow)) * 100;
+
+    const target65 = 0.65;
+    const n65      = Math.ceil(Math.log(1 - target65) / Math.log(step));
+    const cap65    = (n65 + 1) * amount;
+
+    const col = pctCov >= 65 ? 'text-success' : pctCov >= 40 ? 'text-warning' : 'text-danger';
+    el.innerHTML =
+        `Razine: <strong>${totalLvl}</strong> — pokriva pad do ` +
+        `<strong class="${col}">${pctCov.toFixed(1)}%</strong><br>` +
+        `Za 65% pada: <strong>${n65 + 1} razina</strong> = <strong>${cap65.toLocaleString()} USDC</strong>` +
+        (capital < cap65
+            ? ` <span class="text-warning">(nedostaje ${(cap65 - capital).toFixed(0)} USDC)</span>`
+            : ` <span class="text-success">✓</span>`);
+}
+
+document.addEventListener('DOMContentLoaded', updateCapitalCalc);
+</script>
+{% endblock %}
+
 {% endblock %}

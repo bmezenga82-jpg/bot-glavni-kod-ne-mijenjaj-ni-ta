@@ -393,6 +393,8 @@ def get_open_positions():
                 current_price = None
 
             for qty, buy_price in queue:
+                if qty < 0.00001:  # skip floating-point dust from partial fills
+                    continue
                 pnl = None
                 if current_price is not None:
                     pnl = (current_price - buy_price) * qty
