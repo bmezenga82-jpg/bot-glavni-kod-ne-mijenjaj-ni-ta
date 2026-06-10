@@ -77,7 +77,70 @@ def create_app():
         except Exception as e:
             logging.getLogger(__name__).warning(f"Startup: nije mogao obrisati stare ordere: {e}")
 
+    # Pokreni dnevni cleanup TradeLog zapisa starijih od 30 dana
+    _start_trade_cleanup(app)
+
     return app
+
+
+def _cleanup_old_trades(app):
+    """Briše TradeLog zapise starije od 30 dana. Čuva buyeve bez sell-a (otvorene pozicije)."""
+    from datetime import datetime, timedelta
+    from core.models import TradeLog
+    from core.extensions import db as _db
+
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    log = logging.getLogger(__name__)
+
+    try:
+        with app.app_context():
+            # Simboli koji imaju nedavne sellove (ciklus završen) — stari buyevi se mogu brisati
+            recent_sell_symbols = {
+                r.symbol for r in
+                _db.session.query(TradeLog.symbol)
+                .filter(TradeLog.side == 'sell', TradeLog.timestamp >= cutoff)
+                .distinct().all()
+            }
+
+            # Briši sve sellove starije od 30 dana (već u ProfitLog-u)
+            deleted_sells = TradeLog.query.filter(
+                TradeLog.side == 'sell',
+                TradeLog.timestamp < cutoff
+            ).delete(synchronize_session=False)
+
+            # Briši stare buyeve samo za simbole koji aktivno cikliraju
+            deleted_buys = 0
+            if recent_sell_symbols:
+                deleted_buys = TradeLog.query.filter(
+                    TradeLog.side == 'buy',
+                    TradeLog.timestamp < cutoff,
+                    TradeLog.symbol.in_(recent_sell_symbols)
+                ).delete(synchronize_session=False)
+
+            _db.session.commit()
+            if deleted_sells or deleted_buys:
+                log.info(f"TradeLog cleanup: obrisano {deleted_sells} sellova + {deleted_buys} buyeva starijih od 30 dana")
+    except Exception as e:
+        log.warning(f"TradeLog cleanup greška: {e}")
+        try:
+            with app.app_context():
+                _db.session.rollback()
+        except Exception:
+            pass
+
+
+def _start_trade_cleanup(app):
+    """Pokreće dnevni cleanup u background threadu."""
+    INTERVAL = 24 * 60 * 60  # jednom dnevno
+
+    def loop():
+        while True:
+            time.sleep(INTERVAL)
+            _cleanup_old_trades(app)
+
+    t = threading.Thread(target=loop, daemon=True)
+    t.start()
+    logging.getLogger(__name__).info("TradeLog cleanup: pokrenut, izvršava se jednom dnevno")
 
 @socketio.on('request_initial_strategy_logs')
 def handle_request_initial_strategy_logs():
