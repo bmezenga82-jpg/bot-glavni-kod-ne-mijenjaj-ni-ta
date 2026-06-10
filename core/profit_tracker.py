@@ -71,6 +71,7 @@ class ProfitTracker:
             db.session.commit()
         except Exception as e:  # pragma: no cover - skip if DB not configured
             logger.warning("DB logging skipped: %s", e)
+            db.session.rollback()
 
     def get_total_profit(self):
         if self.log_file:

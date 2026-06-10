@@ -1,4 +1,5 @@
 import logging
+import threading
 from core.profit_tracker import ProfitTracker
 from .models import Position
 from core.extensions import db
@@ -9,6 +10,8 @@ class PortfolioManager:
     def __init__(self, profit_tracker=None):
         self.profit_tracker = profit_tracker or ProfitTracker()
         self.total_profit = self._load_total_profit()
+        self.positions = {}
+        self._lock = threading.Lock()
 
     def _load_positions(self):
         """Load positions from the database into an in-memory dictionary."""
@@ -58,7 +61,8 @@ class PortfolioManager:
             return
 
         profit = (sell_price - buy_price) * asset_quantity_sold
-        self.total_profit += profit
+        with self._lock:
+            self.total_profit += profit
 
         exchange_name = kwargs.get('exchange', 'unknown')
         trading_mode_name = kwargs.get('trading_mode', 'unknown')

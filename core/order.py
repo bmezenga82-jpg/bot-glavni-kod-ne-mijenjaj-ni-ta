@@ -6,7 +6,12 @@ logger = logging.getLogger(__name__)
 
 class OrderManager:
     def set_order(self, symbol, side, price, amount, order_id=None, status="open", exchange="binance"):
-        existing = Order.query.filter_by(symbol=symbol, side=side).first()
+        # Traži po order_id ako postoji (podržava više sell ordera po symbolu)
+        if order_id:
+            existing = Order.query.filter_by(order_id=order_id).first()
+        else:
+            existing = Order.query.filter_by(symbol=symbol, side=side).first()
+
         if existing:
             existing.price = round(price, 8)
             existing.amount = round(amount, 8)
