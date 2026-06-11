@@ -41,6 +41,7 @@ def trade_loop(
         """Reload mutable trading parameters from DB (hot config update)."""
         try:
             from core.models import TradingPair
+            from core.extensions import db as _db
             pair_db = TradingPair.query.get(pair_id)
             if pair_db:
                 return (
@@ -49,8 +50,13 @@ def trade_loop(
                     abs(pair_db.buy_percentage),
                     pair_db.profit_mode,
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"reload_settings failed for pair {pair_id}: {e}")
+            try:
+                from core.extensions import db as _db
+                _db.session.rollback()
+            except Exception:
+                pass
         return usdc_amount, sell_pct, buy_pct, profit_mode
 
     def cancel_all_orders():
