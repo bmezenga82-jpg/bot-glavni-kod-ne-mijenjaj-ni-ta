@@ -460,8 +460,9 @@ def register_routes(app):
     @login_required
     def get_profit_log_filters():
         try:
-            symbols = [r[0] for r in db.session.query(ProfitLog.symbol).distinct().order_by(ProfitLog.symbol).all() if r[0]]
-            exchanges = [r[0] for r in db.session.query(ProfitLog.exchange).distinct().order_by(ProfitLog.exchange).all() if r[0]]
+            from core.extensions import db as _db
+            symbols = [r[0] for r in _db.session.query(ProfitLog.symbol).distinct().order_by(ProfitLog.symbol).all() if r[0]]
+            exchanges = [r[0] for r in _db.session.query(ProfitLog.exchange).distinct().order_by(ProfitLog.exchange).all() if r[0]]
             return jsonify({"symbols": symbols, "exchanges": exchanges})
         except Exception as e:
             logger.error(f"Error fetching profit log filters: {e}", exc_info=True)

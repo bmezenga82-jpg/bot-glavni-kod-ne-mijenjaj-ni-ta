@@ -91,7 +91,7 @@ export function initTradesPage() {
                 });
             }
         })
-        .catch(() => {});
+        .catch(err => console.error('profit_log_filters error:', err));
 
     if (timeframeSelect) {
         timeframeSelect.addEventListener('change', (e) => {
