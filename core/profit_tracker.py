@@ -56,16 +56,17 @@ class ProfitTracker:
             if pair_id is not None:
                 pair_profit = PairProfit.query.filter_by(pair_id=pair_id).first()
                 if pair_profit is None:
-                    pair = TradingPair.query.get(pair_id)
                     pair_profit = PairProfit(
                         pair_id=pair_id,
                         exchange=exchange,
                         trading_mode=trading_mode,
+                        profit_usdc=0.0,
+                        profit_crypto=0.0,
                     )
                     db.session.add(pair_profit)
-                pair_profit.profit_usdc += profit
+                pair_profit.profit_usdc = (pair_profit.profit_usdc or 0.0) + profit
                 if profit_mode == 'crypto':
-                    pair_profit.profit_crypto += retained_qty
+                    pair_profit.profit_crypto = (pair_profit.profit_crypto or 0.0) + retained_qty
                 pair_profit.updated_at = datetime.utcnow()
             db.session.commit()
         except Exception as e:  # pragma: no cover - skip if DB not configured
