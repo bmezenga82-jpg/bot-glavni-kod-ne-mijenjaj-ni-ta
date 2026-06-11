@@ -344,6 +344,15 @@ function renderOpenPositions(list) {
     const tbody = document.getElementById('open-positions-body');
     if (!tbody) return;
 
+    // Broj otvorenih pozicija u naslovu kartice
+    const posHeader = document.querySelector('#open-positions-table')?.closest('.card')?.querySelector('.card-header');
+    if (posHeader) {
+        const badge = posHeader.querySelector('.pos-count-badge') || document.createElement('span');
+        badge.className = 'pos-count-badge badge bg-light text-dark ms-2';
+        badge.textContent = list.length;
+        if (!posHeader.querySelector('.pos-count-badge')) posHeader.appendChild(badge);
+    }
+
     // Preimenuj zaglavlje drugog stupca u Qty
     const qtyHeader = document.querySelector('#open-positions-table thead th:nth-child(2)');
     if (qtyHeader) qtyHeader.textContent = 'Qty';
