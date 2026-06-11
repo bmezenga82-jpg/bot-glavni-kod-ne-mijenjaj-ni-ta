@@ -2,9 +2,11 @@ let currentPage = 1;
 const itemsPerPage = 20; // Should match backend default or be configurable
 let currentTimeframe = 'all';
 let currentSort = 'timestamp';
+let currentSymbol = 'all';
+let currentExchange = 'all';
 export function loadProfitLogData(page = 1) {
     currentPage = page;
-    fetch(`/api/profit_log_entries?page=${currentPage}&per_page=${itemsPerPage}&timeframe=${currentTimeframe}&sort=${currentSort}`)
+    fetch(`/api/profit_log_entries?page=${currentPage}&per_page=${itemsPerPage}&timeframe=${currentTimeframe}&sort=${currentSort}&symbol=${currentSymbol}&exchange=${currentExchange}`)
         .then(response => response.json())
         .then(data => {
             if (data.error) {
@@ -64,6 +66,33 @@ export function loadProfitLogData(page = 1) {
 
 export function initTradesPage() {
     const timeframeSelect = document.getElementById('timeframe-select');
+    const sortSelect = document.getElementById('sort-select');
+    const symbolSelect = document.getElementById('symbol-select');
+    const exchangeSelect = document.getElementById('exchange-select');
+
+    // Populate symbol and exchange dropdowns from available data
+    fetch('/api/profit_log_filters')
+        .then(r => r.json())
+        .then(data => {
+            if (symbolSelect && data.symbols) {
+                data.symbols.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = s;
+                    symbolSelect.appendChild(opt);
+                });
+            }
+            if (exchangeSelect && data.exchanges) {
+                data.exchanges.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e;
+                    opt.textContent = e;
+                    exchangeSelect.appendChild(opt);
+                });
+            }
+        })
+        .catch(() => {});
+
     if (timeframeSelect) {
         timeframeSelect.addEventListener('change', (e) => {
             currentTimeframe = e.target.value;
@@ -71,7 +100,20 @@ export function initTradesPage() {
         });
     }
 
-    const sortSelect = document.getElementById('sort-select');
+    if (symbolSelect) {
+        symbolSelect.addEventListener('change', (e) => {
+            currentSymbol = e.target.value;
+            loadProfitLogData(1);
+        });
+    }
+
+    if (exchangeSelect) {
+        exchangeSelect.addEventListener('change', (e) => {
+            currentExchange = e.target.value;
+            loadProfitLogData(1);
+        });
+    }
+
     if (sortSelect) {
         sortSelect.addEventListener('change', (e) => {
             currentSort = e.target.value;
@@ -91,8 +133,12 @@ export function initTradesPage() {
         resetBtn.addEventListener('click', () => {
             currentTimeframe = 'all';
             currentSort = 'timestamp';
+            currentSymbol = 'all';
+            currentExchange = 'all';
             if (timeframeSelect) timeframeSelect.value = 'all';
             if (sortSelect) sortSelect.value = 'timestamp';
+            if (symbolSelect) symbolSelect.value = 'all';
+            if (exchangeSelect) exchangeSelect.value = 'all';
             loadProfitLogData(1);
         });
     }
