@@ -423,12 +423,26 @@ class ExchangeConnector:
         except Exception as e:
             logger.error("Failed to cancel orders for %s: %s", symbol, e)
 
+    def _check_via_open_orders(self, order_id, symbol):
+        """Fallback: confirm whether an order is still open or gone (filled/cancelled)."""
+        try:
+            open_orders = self._api_call(self.exchange.fetch_open_orders, symbol)
+            open_ids = {o['id'] for o in open_orders}
+            if order_id in open_ids:
+                return {'status': 'open', 'filled': 0.0, 'remaining': 0.0}
+            # Not in open orders — most likely filled (bot only cancels orders itself
+            # in known code paths, so an externally-gone order is almost always a fill)
+            logger.warning(f"Order {order_id} for {symbol} not in open orders — treating as closed")
+            return {'status': 'closed', 'filled': 0.0, 'remaining': 0.0}
+        except Exception as e2:
+            logger.error(f"Fallback fetch_open_orders failed for {order_id} ({symbol}): {e2}")
+            return {'status': 'error', 'filled': 0.0, 'remaining': 0.0}
+
     def check_order_status(self, order_id, symbol):
         order_data = None
         try:
             if self.exchange_id == 'bybit':
                 logger.debug(f"Bybit: Checking order status for {order_id} in symbol {symbol}")
-                # Try open orders first
                 open_orders = self._api_call(self.exchange.fetch_open_orders, symbol)
                 for order in open_orders:
                     if order['id'] == order_id:
@@ -437,10 +451,7 @@ class ExchangeConnector:
                         break
 
                 if not order_data:
-                    # Try closed orders if not found in open
                     logger.debug(f"Bybit: Order {order_id} not in open orders, checking recent closed orders for {symbol}.")
-                    # Fetch a limited number of recent closed orders to avoid fetching extensive history.
-                    # The limit of 50 is arbitrary; adjust as needed.
                     closed_orders = self._api_call(self.exchange.fetch_closed_orders, symbol, limit=50)
                     for order in closed_orders:
                         if order['id'] == order_id:
@@ -449,12 +460,9 @@ class ExchangeConnector:
                             break
 
                 if not order_data:
-                    # As a last resort, try fetchOrder, acknowledging its limitations
                     logger.warning(f"Bybit: Order {order_id} not in open or recent closed. Attempting fetchOrder for {symbol} (may fail for older orders).")
-                    # Suppress CCXT's internal warning about fetchOrder limitations on Bybit
                     order_data = self._api_call(self.exchange.fetch_order, order_id, symbol, params={'acknowledged': True})
             else:
-                # Default behavior for other exchanges
                 order_data = self._api_call(self.exchange.fetch_order, order_id, symbol)
 
             if order_data:
@@ -462,11 +470,16 @@ class ExchangeConnector:
                     'status': order_data.get('status'),
                     'filled': order_data.get('filled', 0.0),
                     'remaining': order_data.get('remaining', 0.0),
-                    # Consider adding 'average' and 'cost' if available and useful here
                 }
             else:
                 logger.warning(f"Could not find order {order_id} for {symbol} on {self.exchange_id}.")
                 return {'status': 'not_found', 'filled': 0.0, 'remaining': 0.0}
+
+        except (ccxt.OrderNotFound, ccxt.InvalidOrder) as e:
+            # Order not accessible via fetchOrder — archived/filled on exchange.
+            # Fall back to open-orders list to distinguish filled from cancelled.
+            logger.debug(f"Order {order_id} not found via fetchOrder on {self.exchange_id} ({symbol}): {e}")
+            return self._check_via_open_orders(order_id, symbol)
 
         except Exception as e:
             logger.error(f"Failed to fetch order status for {order_id} on {self.exchange_id} ({symbol}): {e}", exc_info=True)

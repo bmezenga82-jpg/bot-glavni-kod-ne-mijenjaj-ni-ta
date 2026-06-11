@@ -1,6 +1,9 @@
+import logging
 from .models import TradeLog
 from core.extensions import db
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 class TradeLogger:
     def log(
@@ -23,5 +26,9 @@ class TradeLogger:
             exchange=exchange,
             trading_mode=trading_mode,
         )
-        db.session.add(entry)
-        db.session.commit()
+        try:
+            db.session.add(entry)
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"TradeLog DB write failed for {side} {symbol}: {e}")
+            db.session.rollback()

@@ -1,11 +1,14 @@
-export function openEditModal(id, symbol, buyPercentage, sellPercentage, amount, exchange, mode, profitMode) {
+export function openEditModal(id, symbol, buyPercentage, sellPercentage, amount, exchange, mode, profitMode, isRunning) {
     document.getElementById('edit-id').value = id;
     document.getElementById('edit-symbol').value = symbol;
     document.getElementById('buyPercentage').value = buyPercentage;
     document.getElementById('sellPercentage').value = sellPercentage;
     document.getElementById('amount').value = amount;
     const exSelect = document.getElementById('exchangeSelect');
-    if (exSelect) exSelect.value = exchange;
+    if (exSelect) {
+        exSelect.value = exchange;
+        exSelect.disabled = !!isRunning;
+    }
     const modeSelect = document.getElementById('tradingMode');
     if (modeSelect) {
         if (exchange === 'binance') {
@@ -14,11 +17,15 @@ export function openEditModal(id, symbol, buyPercentage, sellPercentage, amount,
             modeSelect.innerHTML = '<option value="real">Real</option>';
         }
         modeSelect.value = (exchange === 'binance' && mode === 'testnet') ? 'testnet' : 'real';
+        modeSelect.disabled = !!isRunning;
     }
     const profitSelect = document.getElementById('profitMode');
     if (profitSelect) {
         profitSelect.value = profitMode || 'usdc';
+        profitSelect.disabled = false;
     }
+    const notice = document.getElementById('edit-running-notice');
+    if (notice) notice.classList.toggle('d-none', !isRunning);
     document.getElementById('editConfigModalLabel').textContent = `Pair Configuration for ${symbol}`;
     const modal = new bootstrap.Modal(document.getElementById('editConfigModal'));
     modal.show();
@@ -52,7 +59,10 @@ export function saveConfig() {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            alert('Configuration updated successfully!');
+            const msg = data.bot_running
+                ? 'Postavke snimljene.\nBot nastavlja s postojećim orderima — novi orderi koristit će nove parametre.'
+                : 'Postavke ažurirane.';
+            alert(msg);
             const modal = bootstrap.Modal.getInstance(document.getElementById('editConfigModal'));
             modal.hide();
 
@@ -64,7 +74,7 @@ export function saveConfig() {
             const pmEl = document.getElementById(`profit-${id}`);
             if (pmEl) pmEl.innerText = profitMode;
         } else {
-            alert('Failed to update configuration: ' + data.message);
+            alert('Greška pri snimanju: ' + data.message);
         }
     })
     .catch(error => {

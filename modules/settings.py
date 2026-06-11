@@ -3,7 +3,7 @@ from flask import request, redirect, url_for, flash, render_template, session, j
 from modules.utils import get_pairs, load_api_keys, save_api_keys, get_exchange_pairs, reset_connectors
 from modules.data import reset_cached_connectors
 import yaml
-from modules.notifications import notifications, save_notifications
+from modules.notifications import notifications, save_notifications, add_notification
 from modules.bot_control import bot_manager
 from modules.auth import users, bcrypt
 from core.extensions import db
@@ -242,4 +242,9 @@ def update_pair_config(config):
     pair.buy_percentage = buy_pct
     db.session.commit()
 
-    return jsonify({'status': 'success'})
+    running = bot_manager.is_running(pair_id)
+    if running:
+        add_notification(pair.symbol, f'Postavke ažurirane — primjenjuju se na sljedeće narudžbe (bot radi)', 'info')
+        return jsonify({'status': 'success', 'bot_running': True,
+                        'message': 'Postavke su snimljene. Bot nastavlja s postojećim orderima, novi orderi koristit će nove parametre.'})
+    return jsonify({'status': 'success', 'bot_running': False})

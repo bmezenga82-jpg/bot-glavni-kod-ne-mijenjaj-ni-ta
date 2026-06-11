@@ -488,6 +488,40 @@ def register_routes(app):
             logger.error(f"Error removing pair profit: {e}", exc_info=True)
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/performance_report")
+    @login_required
+    def performance_report_route():
+        try:
+            days = request.args.get('days', 1, type=int)
+            query = ProfitLog.query
+            if days > 0:
+                cutoff = datetime.utcnow() - timedelta(days=days)
+                query = query.filter(ProfitLog.timestamp >= cutoff)
+            rows = query.all()
+
+            grouped = {}
+            for r in rows:
+                key = (r.symbol, r.exchange)
+                if key not in grouped:
+                    grouped[key] = {'sells': 0, 'profit': 0.0}
+                grouped[key]['sells'] += 1
+                grouped[key]['profit'] += r.profit_usdt
+
+            result = [
+                {
+                    'symbol': sym,
+                    'exchange': ex,
+                    'sells': d['sells'],
+                    'profit': round(d['profit'], 4),
+                    'avg': round(d['profit'] / d['sells'], 4) if d['sells'] else 0,
+                }
+                for (sym, ex), d in sorted(grouped.items())
+            ]
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"Error fetching performance report: {e}", exc_info=True)
+            return jsonify([]), 500
+
     @app.route("/toggle_theme", methods=["POST"])
     def toggle_theme_route():
         current = session.get("theme", "dark")

@@ -37,6 +37,22 @@ def trade_loop(
     buy_order_id: str | None = None
     sell_orders = []
 
+    def reload_settings():
+        """Reload mutable trading parameters from DB (hot config update)."""
+        try:
+            from core.models import TradingPair
+            pair_db = TradingPair.query.get(pair_id)
+            if pair_db:
+                return (
+                    pair_db.amount,
+                    pair_db.sell_percentage,
+                    abs(pair_db.buy_percentage),
+                    pair_db.profit_mode,
+                )
+        except Exception:
+            pass
+        return usdc_amount, sell_pct, buy_pct, profit_mode
+
     def cancel_all_orders():
         """Cancels all open orders for the symbol and resets local state."""
         nonlocal buy_order_id
@@ -102,6 +118,27 @@ def trade_loop(
             except Exception as e:
                 logger.warning(f"[RECOVERY] Nije mogao provjeriti downtime fillove: {e}")
 
+            # Rekonstruiraj TradeLog pozicije ako su obrisane (npr. Clear positions)
+            # ali sell orderi i dalje postoje na burzi
+            if sell_orders:
+                try:
+                    from core.models import TradeLog as _TL
+                    from sqlalchemy import func as _func
+                    buy_count  = _TL.query.filter_by(symbol=symbol, side='buy').count()
+                    sell_count = _TL.query.filter_by(symbol=symbol, side='sell').count()
+                    # Ako nema niti jednog buy zapisa (ili su svi već pokriti sellovima) → dodaj sintetičke
+                    if buy_count <= sell_count:
+                        for order in sell_orders:
+                            trade_logger.log(
+                                symbol, 'buy',
+                                order['buy_price'], order['amount'],
+                                settings['exchange'], settings.get('trading_mode', 'testnet'),
+                            )
+                        logger.info(f"[RECOVERY] {symbol}: dodano {len(sell_orders)} sintetičkih buy zapisa u TradeLog")
+                        add_notification(symbol, f"Recovery: rekonstruirane pozicije ({len(sell_orders)} sell ordera)", 'info')
+                except Exception as e:
+                    logger.warning(f"[RECOVERY] Nije mogao rekonstruirati TradeLog pozicije: {e}")
+
             recovered = True
             add_notification(symbol, f"Recovery: nastavljam s {len(sell_orders)} sell + {len(ex_buys)} buy ordera", 'success')
             logger.info(f"[RECOVERY] {symbol}: {len(sell_orders)} sell, {len(ex_buys)} buy — nastavlja bez market buy")
@@ -115,10 +152,13 @@ def trade_loop(
         try:
             time.sleep(5)
 
+            # Hot reload: apply any settings changes saved from the dashboard
+            usdc_amount, sell_pct, buy_pct, profit_mode = reload_settings()
+
             # Check status of sell orders
             for sell_order in sell_orders[:]:  # Iterate over a copy
                 status = exchange.check_order_status(sell_order['id'], symbol)
-                if status['status'] == 'closed':
+                if status['status'] in ('closed', 'filled'):
                     price = sell_order['price']
                     qty = sell_order['amount']
                     retained_qty = sell_order.get('retained_qty', 0.0)
@@ -192,7 +232,7 @@ def trade_loop(
             # Check status of the buy order
             if buy_order_id:
                 status = exchange.check_order_status(buy_order_id, symbol)
-                if status['status'] == 'closed':
+                if status['status'] in ('closed', 'filled'):
                     buy_price = order_mgr.get_order(symbol, 'buy').price
                     qty = status.get('filled', order_mgr.get_order(symbol, 'buy').amount)
 

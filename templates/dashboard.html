@@ -55,6 +55,41 @@
         </div>
     </div>
 
+    <!-- Performance Report -->
+    <div class="row">
+        <div class="col-12 mb-3">
+            <div class="card shadow-sm small-text xsmall-text h-100">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" style="font-family: 'Orbitron', sans-serif;">
+                    <span>Izvještaj trgovanja</span>
+                    <div class="btn-group btn-group-sm" id="perf-timeframe-btns">
+                        <button class="btn btn-light btn-xxs active" data-days="1">1D</button>
+                        <button class="btn btn-outline-light btn-xxs" data-days="7">7D</button>
+                        <button class="btn btn-outline-light btn-xxs" data-days="30">30D</button>
+                        <button class="btn btn-outline-light btn-xxs" data-days="0">Sve</button>
+                    </div>
+                </div>
+                <div class="card-body scroll-area">
+                    <div class="table-responsive">
+                        <table class="table table-bordered small-table" id="perf-table">
+                            <thead>
+                                <tr>
+                                    <th>Par</th>
+                                    <th>Burza</th>
+                                    <th class="text-end">Sellova</th>
+                                    <th class="text-end">Profit (USDC)</th>
+                                    <th class="text-end">Avg/Sell</th>
+                                </tr>
+                            </thead>
+                            <tbody id="perf-body">
+                                <tr><td colspan="5" class="text-center text-muted">Učitavanje...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-12 mb-3">
             <!-- Market Overview -->
@@ -102,9 +137,10 @@
                                         {% else %}
                                         <button class="btn btn-xxs btn-success action-btn" id="action-{{ pair['id'] }}">Start</button>
                                         {% endif %}
-                                        <button class="btn btn-xxs btn-warning edit-action-btn {% if pair['is_running'] %}disabled{% endif %}"
+                                        <button class="btn btn-xxs btn-warning edit-action-btn"
                                         id="edit-action-{{ pair['id'] }}"
-                                        onclick="openEditModal({{ pair['id'] }}, '{{ pair['symbol'] }}', {{ pair['buy_percentage'] }}, {{ pair['sell_percentage'] }}, {{ pair['amount'] }}, '{{ pair['exchange'] }}', '{{ pair['trading_mode'] }}', '{{ pair['profit_mode'] }}')">
+                                        data-running="{{ 'true' if pair['is_running'] else 'false' }}"
+                                        onclick="openEditModal({{ pair['id'] }}, '{{ pair['symbol'] }}', {{ pair['buy_percentage'] }}, {{ pair['sell_percentage'] }}, {{ pair['amount'] }}, '{{ pair['exchange'] }}', '{{ pair['trading_mode'] }}', '{{ pair['profit_mode'] }}', {{ 'true' if pair['is_running'] else 'false' }})">
                                             Edit
                                         </button>
                                     </div>
@@ -155,6 +191,9 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="edit-running-notice" class="alert alert-info py-1 small d-none">
+                        Bot je aktivan — promjene uloška, postotaka i profit moda primjenjuju se odmah na sljedeće narudžbe. Burza i mod zahtijevaju restart.
+                    </div>
                     <form id="editConfigForm">
                         <input type="hidden" id="edit-id" name="pair_id">
                         <input type="hidden" id="edit-symbol" name="symbol">
@@ -225,4 +264,76 @@
     </div>
     -->
 </div>
+
+<script>
+(function () {
+    let perfDays = 1;
+    let perfTimer = null;
+
+    function loadPerfReport(days) {
+        fetch('/api/performance_report?days=' + days)
+            .then(r => r.json())
+            .then(rows => {
+                const tbody = document.getElementById('perf-body');
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nema podataka za odabrani period</td></tr>';
+                    return;
+                }
+                let totalSells = 0, totalProfit = 0;
+                let html = '';
+                rows.forEach(r => {
+                    totalSells += r.sells;
+                    totalProfit += r.profit;
+                    const profitClass = r.profit >= 0 ? 'text-success' : 'text-danger';
+                    const sign = r.profit >= 0 ? '+' : '';
+                    html += `<tr>
+                        <td>${r.symbol}</td>
+                        <td>${r.exchange}</td>
+                        <td class="text-end">${r.sells}</td>
+                        <td class="text-end ${profitClass}">${sign}${r.profit.toFixed(4)}</td>
+                        <td class="text-end">${r.avg.toFixed(4)}</td>
+                    </tr>`;
+                });
+                const totalSign = totalProfit >= 0 ? '+' : '';
+                const totalClass = totalProfit >= 0 ? 'text-success' : 'text-danger';
+                const avgAll = totalSells ? totalProfit / totalSells : 0;
+                html += `<tr class="fw-bold border-top">
+                    <td colspan="2">Ukupno</td>
+                    <td class="text-end">${totalSells}</td>
+                    <td class="text-end ${totalClass}">${totalSign}${totalProfit.toFixed(4)}</td>
+                    <td class="text-end">${avgAll.toFixed(4)}</td>
+                </tr>`;
+                tbody.innerHTML = html;
+            })
+            .catch(() => {
+                document.getElementById('perf-body').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Greška pri učitavanju</td></tr>';
+            });
+    }
+
+    function schedulePerfRefresh() {
+        clearTimeout(perfTimer);
+        perfTimer = setTimeout(function () {
+            loadPerfReport(perfDays);
+            schedulePerfRefresh();
+        }, 60000);
+    }
+
+    document.getElementById('perf-timeframe-btns').addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-days]');
+        if (!btn) return;
+        document.querySelectorAll('#perf-timeframe-btns .btn').forEach(b => {
+            b.classList.remove('active', 'btn-light');
+            b.classList.add('btn-outline-light');
+        });
+        btn.classList.add('active', 'btn-light');
+        btn.classList.remove('btn-outline-light');
+        perfDays = parseInt(btn.dataset.days, 10);
+        loadPerfReport(perfDays);
+        schedulePerfRefresh();
+    });
+
+    loadPerfReport(perfDays);
+    schedulePerfRefresh();
+})();
+</script>
 {% endblock %}
