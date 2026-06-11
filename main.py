@@ -182,30 +182,34 @@ def trade_loop(
                         f"Sold {qty} at {price} — Retained {retained_qty} (Mode: {profit_mode})"
                     )
 
-                    # Record the sell
-                    portfolio.record_sell(
-                        symbol,
-                        price,
-                        qty,
-                        sell_order['buy_price'],
-                        exchange=settings['exchange'],
-                        trading_mode=settings['trading_mode'],
-                        pair_id=pair_id,
-                        retained_qty=retained_qty,
-                        profit_mode=profit_mode,
-                    )
-                    trade_logger.log(
-                        symbol,
-                        'sell',
-                        price,
-                        qty,
-                        settings.get('exchange', 'binance'),
-                        settings.get('trading_mode', 'testnet'),
-                    )
+                    # Svaki korak je nezavisan — pad jednog ne smije blokirati ostale
+                    try:
+                        portfolio.record_sell(
+                            symbol, price, qty, sell_order['buy_price'],
+                            exchange=settings['exchange'],
+                            trading_mode=settings['trading_mode'],
+                            pair_id=pair_id,
+                            retained_qty=retained_qty,
+                            profit_mode=profit_mode,
+                        )
+                    except Exception as e:
+                        logger.error(f"record_sell failed for {symbol}: {e}", exc_info=True)
 
-                    # Remove from active sell orders
+                    try:
+                        trade_logger.log(
+                            symbol, 'sell', price, qty,
+                            settings.get('exchange', 'binance'),
+                            settings.get('trading_mode', 'testnet'),
+                        )
+                    except Exception as e:
+                        logger.error(f"trade_logger.log sell failed for {symbol}: {e}", exc_info=True)
+
+                    # Cleanup uvijek mora proći
                     sell_orders.remove(sell_order)
-                    order_mgr.cancel_orders(symbol, order_id=sell_order['id'])
+                    try:
+                        order_mgr.cancel_orders(symbol, order_id=sell_order['id'])
+                    except Exception as e:
+                        logger.error(f"order_mgr.cancel_orders sell failed for {symbol}: {e}", exc_info=True)
 
                     # If a buy order is active, cancel it
                     if buy_order_id:
@@ -248,51 +252,63 @@ def trade_loop(
             if buy_order_id:
                 status = exchange.check_order_status(buy_order_id, symbol)
                 if status['status'] in ('closed', 'filled'):
-                    buy_price = order_mgr.get_order(symbol, 'buy').price
-                    qty = status.get('filled', order_mgr.get_order(symbol, 'buy').amount)
+                    buy_record = order_mgr.get_order(symbol, 'buy')
+                    buy_price = buy_record.price if buy_record else None
+                    qty = status.get('filled') or (buy_record.amount if buy_record else 0)
 
-                    logger.info(f"Buy order {buy_order_id} for {qty} {symbol} at {buy_price} filled.")
-
-                    portfolio.record_buy(symbol, usdc_amount, buy_price)
-                    trade_logger.log(
-                        symbol,
-                        'buy',
-                        buy_price,
-                        qty,
-                        settings.get('exchange', 'binance'),
-                        settings.get('trading_mode', 'testnet'),
-                    )
-
-                    # Cancel previous buy order from manager and set new one
-                    order_mgr.cancel_orders(symbol, side='buy')
-
-                    # Place a new sell order for this buy
-                    sell_price = buy_price * (1 + sell_pct / 100)
-                    if profit_mode == 'crypto':
-                        sell_qty = min(qty, usdc_amount / sell_price)
-                        retained_qty = max(0.0, qty - sell_qty)
+                    if not buy_price:
+                        logger.error(f"Buy fill detected for {symbol} but no buy record found — skipping")
+                        buy_order_id = None
                     else:
-                        sell_qty = qty
-                        retained_qty = 0.0
-                    sell_qty = round(sell_qty, 8)
-                    retained_qty = round(retained_qty, 8)
-                    sell_order = exchange.place_limit_order(symbol, 'sell', sell_price, sell_qty)
-                    if sell_order and 'order_id' in sell_order:
-                        sell_order_id = sell_order['order_id']
-                        sell_orders.append({'id': sell_order_id, 'price': sell_price, 'amount': sell_qty, 'buy_price': buy_price, 'retained_qty': retained_qty})
-                        order_mgr.set_order(symbol, 'sell', sell_price, sell_qty, sell_order_id, exchange=settings['exchange'])
-                        logger.info(f"Placed new sell order {sell_order_id} for {sell_qty} at {sell_price}. Retained {retained_qty} (Mode: {profit_mode})")
+                        logger.info(f"Buy order {buy_order_id} for {qty} {symbol} at {buy_price} filled.")
 
-                    # Place the next buy order
-                    next_buy_price = buy_price * (1 - buy_pct / 100)
-                    next_buy_qty = usdc_amount / next_buy_price
-                    new_buy_order = exchange.place_limit_order(symbol, 'buy', next_buy_price, next_buy_qty)
-                    if new_buy_order and 'order_id' in new_buy_order:
-                        buy_order_id = new_buy_order['order_id']
-                        order_mgr.set_order(symbol, 'buy', next_buy_price, next_buy_qty, buy_order_id, exchange=settings['exchange'])
-                        logger.info(f"Placed next buy order {buy_order_id} at {next_buy_price}.")
-                    else:
-                        buy_order_id = None # Ensure buy_order_id is cleared if order fails
+                        try:
+                            portfolio.record_buy(symbol, usdc_amount, buy_price)
+                        except Exception as e:
+                            logger.error(f"record_buy failed for {symbol}: {e}", exc_info=True)
+
+                        try:
+                            trade_logger.log(
+                                symbol, 'buy', buy_price, qty,
+                                settings.get('exchange', 'binance'),
+                                settings.get('trading_mode', 'testnet'),
+                            )
+                        except Exception as e:
+                            logger.error(f"trade_logger.log buy failed for {symbol}: {e}", exc_info=True)
+
+                        # Cleanup uvijek mora proći
+                        try:
+                            order_mgr.cancel_orders(symbol, side='buy')
+                        except Exception as e:
+                            logger.error(f"order_mgr.cancel_orders buy failed for {symbol}: {e}", exc_info=True)
+
+                        # Place a new sell order for this buy
+                        sell_price = buy_price * (1 + sell_pct / 100)
+                        if profit_mode == 'crypto':
+                            sell_qty = min(qty, usdc_amount / sell_price)
+                            retained_qty = max(0.0, qty - sell_qty)
+                        else:
+                            sell_qty = qty
+                            retained_qty = 0.0
+                        sell_qty = round(sell_qty, 8)
+                        retained_qty = round(retained_qty, 8)
+                        sell_order = exchange.place_limit_order(symbol, 'sell', sell_price, sell_qty)
+                        if sell_order and 'order_id' in sell_order:
+                            sell_order_id = sell_order['order_id']
+                            sell_orders.append({'id': sell_order_id, 'price': sell_price, 'amount': sell_qty, 'buy_price': buy_price, 'retained_qty': retained_qty})
+                            order_mgr.set_order(symbol, 'sell', sell_price, sell_qty, sell_order_id, exchange=settings['exchange'])
+                            logger.info(f"Placed new sell order {sell_order_id} for {sell_qty} at {sell_price}. Retained {retained_qty} (Mode: {profit_mode})")
+
+                        # Place the next buy order
+                        next_buy_price = buy_price * (1 - buy_pct / 100)
+                        next_buy_qty = usdc_amount / next_buy_price
+                        new_buy_order = exchange.place_limit_order(symbol, 'buy', next_buy_price, next_buy_qty)
+                        if new_buy_order and 'order_id' in new_buy_order:
+                            buy_order_id = new_buy_order['order_id']
+                            order_mgr.set_order(symbol, 'buy', next_buy_price, next_buy_qty, buy_order_id, exchange=settings['exchange'])
+                            logger.info(f"Placed next buy order {buy_order_id} at {next_buy_price}.")
+                        else:
+                            buy_order_id = None
 
                 elif status['status'] in ('canceled', 'not_found'):
                     buy_order_id = None
