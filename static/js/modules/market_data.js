@@ -344,12 +344,13 @@ function renderOpenPositions(list) {
     const tbody = document.getElementById('open-positions-body');
     if (!tbody) return;
 
-    // Broj otvorenih pozicija u naslovu kartice
+    // Ukupan broj parova u naslovu kartice
     const posHeader = document.querySelector('#open-positions-table')?.closest('.card')?.querySelector('.card-header');
     if (posHeader) {
         const badge = posHeader.querySelector('.pos-count-badge') || document.createElement('span');
         badge.className = 'pos-count-badge badge bg-light text-dark ms-2';
-        badge.textContent = list.length;
+        const groupCount = new Set(list.map(p => `${p.symbol}|${p.exchange}`)).size;
+        badge.textContent = `${groupCount} par${groupCount !== 1 ? 'a' : ''}`;
         if (!posHeader.querySelector('.pos-count-badge')) posHeader.appendChild(badge);
     }
 
@@ -416,7 +417,10 @@ function renderOpenPositions(list) {
         header.innerHTML = `
             <td style="white-space: nowrap;">
                 <div class="d-flex flex-column align-items-start">
-                    <div class="fw-bold text-primary" style="font-size: 1.15rem; line-height: 1; margin-bottom: 2px;">${symbol}</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="fw-bold text-primary" style="font-size: 1.15rem; line-height: 1; margin-bottom: 2px;">${symbol}</div>
+                        <span class="badge bg-secondary" style="font-size: 0.65rem;">${positions.length} pos</span>
+                    </div>
                     <div class="fw-bold text-uppercase" style="font-size: 0.75rem; line-height: 1; color: #ffc107;">${exchange}</div>
                     <div class="text-info mt-1 fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px;">PROFIT: ${profitMode.toUpperCase()}</div>
                 </div>
