@@ -118,6 +118,21 @@ def trade_loop(
             except Exception as e:
                 logger.warning(f"[RECOVERY] Nije mogao provjeriti downtime fillove: {e}")
 
+            # Ako imamo sell ordere ali nema aktivnog buy ordera → postavi buy ispod najnižeg sella
+            if sell_orders and not buy_order_id:
+                try:
+                    lowest_sell = min(sell_orders, key=lambda o: o['price'])
+                    new_buy_price = lowest_sell['price'] * (1 - buy_pct / 100)
+                    new_buy_qty = usdc_amount / new_buy_price
+                    new_buy = exchange.place_limit_order(symbol, 'buy', new_buy_price, new_buy_qty)
+                    if new_buy and 'order_id' in new_buy:
+                        buy_order_id = new_buy['order_id']
+                        order_mgr.set_order(symbol, 'buy', new_buy_price, new_buy_qty, buy_order_id, exchange=settings['exchange'])
+                        logger.info(f"[RECOVERY] {symbol}: buy postavljen @ {new_buy_price:.4f} ispod najnižeg sella @ {lowest_sell['price']:.4f}")
+                        add_notification(symbol, f"Recovery: buy @ {new_buy_price:.4f} (ispod sella @ {lowest_sell['price']:.4f})", 'success')
+                except Exception as e:
+                    logger.warning(f"[RECOVERY] Nije mogao postaviti buy u recovery: {e}")
+
             # Rekonstruiraj TradeLog pozicije ako su obrisane (npr. Clear positions)
             # ali sell orderi i dalje postoje na burzi
             if sell_orders:
