@@ -122,7 +122,7 @@ export function updateData() {
                         btn.classList.toggle('btn-danger', running);
                         const editBtn = document.getElementById(`edit-action-${id}`);
                         if (editBtn) {
-                            running ? editBtn.classList.add('disabled') : editBtn.classList.remove('disabled');
+                            editBtn.dataset.running = running ? 'true' : 'false';
                         }
                     }
                 }
