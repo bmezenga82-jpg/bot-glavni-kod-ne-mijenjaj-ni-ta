@@ -10,38 +10,37 @@ from core.models import ProfitLog, PairProfit, TradingPair
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 class ProfitTracker:
     def __init__(self, log_file: str = "profit_log.csv"):
+        # Uvijek apsolutna putanja relativna na root projekta
+        if not os.path.isabs(log_file):
+            log_file = os.path.join(_BASE_DIR, log_file)
         self.log_file = log_file
         self._lock = threading.Lock()
-        if not os.path.exists(self.log_file):
-            with open(self.log_file, "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow([
-                    "timestamp",
-                    "symbol",
-                    "buy_price",
-                    "sell_price",
-                    "amount",
-                    "profit_usdt",
-                    "exchange",
-                    "trading_mode",
-                ])
+        try:
+            if not os.path.exists(self.log_file):
+                with open(self.log_file, "w", newline="") as f:
+                    csv.writer(f).writerow([
+                        "timestamp", "symbol", "buy_price", "sell_price",
+                        "amount", "profit_usdt", "exchange", "trading_mode",
+                    ])
+        except Exception as e:
+            logger.warning(f"Ne mogu kreirati profit_log.csv: {e}")
 
     def log_profit(self, symbol, buy_price, sell_price, amount, exchange: str, trading_mode: str, pair_id: int | None = None, retained_qty: float = 0.0, profit_mode: str = 'usdc'):
         profit = (sell_price - buy_price) * amount
-        with self._lock, open(self.log_file, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                datetime.utcnow().isoformat(),
-                symbol,
-                buy_price,
-                sell_price,
-                amount,
-                round(profit, 6),
-                exchange,
-                trading_mode,
-            ])
+        try:
+            with self._lock:
+                with open(self.log_file, "a", newline="") as f:
+                    csv.writer(f).writerow([
+                        datetime.utcnow().isoformat(), symbol,
+                        buy_price, sell_price, amount,
+                        round(profit, 6), exchange, trading_mode,
+                    ])
+        except Exception as e:
+            logger.warning(f"Ne mogu pisati u profit_log.csv: {e}")
 
         entry = ProfitLog(
             symbol=symbol,
