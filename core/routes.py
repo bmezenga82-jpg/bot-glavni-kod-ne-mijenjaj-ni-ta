@@ -467,6 +467,36 @@ def register_routes(app):
             logger.error(f"Error fetching profit log filters: {e}", exc_info=True)
             return jsonify({"symbols": [], "exchanges": []}), 500
 
+    @app.route("/api/capital_calc_data")
+    @login_required
+    def capital_calc_data():
+        try:
+            from core.models import TradingPair, TradeLog
+            pairs = TradingPair.query.all()
+            result = []
+            for p in pairs:
+                # Invested = sum of buy trades cost (price * amount) in TradeLog
+                buys = TradeLog.query.filter_by(symbol=p.symbol, exchange=p.exchange, side='buy').all()
+                sells = TradeLog.query.filter_by(symbol=p.symbol, exchange=p.exchange, side='sell').all()
+                buy_count = len(buys)
+                sell_count = len(sells)
+                open_buys = buy_count - sell_count
+                invested = sum(t.usdt_value for t in buys[-max(open_buys, 0):]) if open_buys > 0 else 0.0
+                result.append({
+                    'pair_id': p.id,
+                    'symbol': p.symbol,
+                    'exchange': p.exchange,
+                    'trading_mode': p.trading_mode,
+                    'usdc_amount': p.amount,
+                    'buy_pct': abs(p.buy_percentage),
+                    'is_running': bot_manager.is_running(p.id),
+                    'invested': round(invested, 2),
+                })
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"Error fetching capital calc data: {e}", exc_info=True)
+            return jsonify([]), 500
+
     @app.route("/api/pair_profit")
     @login_required
     def get_pair_profit_route():

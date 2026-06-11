@@ -130,6 +130,9 @@ export function updateData() {
 
             if (data.account_info) {
                 renderAccountInfo(data.account_info);
+                if (typeof window._capitalRefreshHook === 'function') {
+                    window._capitalRefreshHook(data.account_info);
+                }
             }
         })
         .then(() => fetch('/api/pair_profit'))

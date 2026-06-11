@@ -182,6 +182,56 @@
         </div>
     </div>
 
+    <!-- Kalkulator pokrivenosti kapitala -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <span>Kalkulator pokrivenosti kapitala</span>
+        </div>
+        <div class="card-body p-2">
+            <div class="table-responsive">
+                <table class="table table-sm table-dark table-bordered mb-2" id="capital-calc-table">
+                    <thead>
+                        <tr>
+                            <th>Par</th>
+                            <th class="text-end">Ulog</th>
+                            <th class="text-end">Buy%</th>
+                            <th class="text-center" style="width:110px;">Pada%</th>
+                            <th class="text-end">Koraci</th>
+                            <th class="text-end">Potrebno</th>
+                            <th class="text-end">Uloženo</th>
+                            <th class="text-end">Fali</th>
+                        </tr>
+                    </thead>
+                    <tbody id="capital-calc-body"></tbody>
+                    <tfoot id="capital-calc-foot"></tfoot>
+                </table>
+            </div>
+            <!-- Dostupni kapital -->
+            <div class="border border-secondary rounded p-2 mt-2" id="capital-available-section">
+                <div class="row g-2 align-items-end">
+                    <div class="col-auto">
+                        <small class="text-muted d-block">Spot (auto)</small>
+                        <span id="capital-spot-display" class="text-info fw-bold">—</span>
+                    </div>
+                    <div class="col-auto">
+                        <small class="text-muted d-block">Earn ($)</small>
+                        <input type="number" id="capital-earn" class="form-control form-control-sm" style="width:100px;" placeholder="0" min="0" step="0.01">
+                    </div>
+                    <div class="col-auto">
+                        <small class="text-muted d-block">Van mjenjačnice ($)</small>
+                        <input type="number" id="capital-external" class="form-control form-control-sm" style="width:120px;" placeholder="0" min="0" step="0.01">
+                    </div>
+                    <div class="col-auto ms-auto">
+                        <div id="capital-result-box" class="rounded p-2 text-center" style="min-width:180px;background:#1a1d20;">
+                            <div class="text-muted small">Ukupno fali / višak</div>
+                            <div id="capital-result-value" class="fw-bold fs-5">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Configuration Modal -->
     <div class="modal fade" id="editConfigModal" tabindex="-1" aria-labelledby="editConfigModalLabel" aria-hidden="true">
         <div class="modal-dialog">

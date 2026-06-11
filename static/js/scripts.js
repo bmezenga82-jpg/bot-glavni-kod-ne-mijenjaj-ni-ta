@@ -79,6 +79,14 @@ async function initializeApp() {
             updateData().then(() => attachControlHandlers(toggleBot, updateData));
         }, 30000);
         updateData().then(() => attachControlHandlers(toggleBot, updateData));
+
+        if (document.getElementById('capital-calc-table')) {
+            const { initCapitalCalculator, refreshCapitalCalculator } = await import('./modules/capital_calculator.js');
+            initCapitalCalculator();
+            // Osvježi spot balance kad updateData donese account_info
+            const origUpdate = updateData;
+            window._capitalRefreshHook = (accountInfo) => refreshCapitalCalculator(accountInfo);
+        }
     }
     if (document.getElementById('market-overview-table')) {
         const { initializeMarketTable } = await import('./modules/market_data.js');
