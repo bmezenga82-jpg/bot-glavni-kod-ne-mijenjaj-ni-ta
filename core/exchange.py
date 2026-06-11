@@ -218,7 +218,10 @@ class ExchangeConnector:
                         side='buy',
                         amount=None,
                         price=None,
-                        params={'notional': notional_str}
+                        params={
+                            'notional': notional_str,
+                            'createMarketBuyOrderRequiresPrice': False,
+                        }
                     )
                     logger.debug(f"Order response for {symbol}: {order_response}")
                 except Exception as e:
