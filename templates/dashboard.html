@@ -208,7 +208,7 @@
             </div>
             <!-- Dostupni kapital -->
             <div class="border border-secondary rounded p-2 mt-2" id="capital-available-section">
-                <div class="row g-2 align-items-end">
+                <div class="row g-2 align-items-end mb-2">
                     <div class="col-auto">
                         <small class="text-muted d-block">Spot (auto)</small>
                         <span id="capital-spot-display" class="text-info fw-bold">—</span>
@@ -217,10 +217,16 @@
                         <small class="text-muted d-block">Earn ($)</small>
                         <input type="number" id="capital-earn" class="form-control form-control-sm" style="width:100px;" placeholder="0" min="0" step="0.01">
                     </div>
-                    <div class="col-auto">
-                        <small class="text-muted d-block">Van mjenjačnice ($)</small>
-                        <input type="number" id="capital-external" class="form-control form-control-sm" style="width:120px;" placeholder="0" min="0" step="0.01">
+                </div>
+                <div class="row g-2 mb-2">
+                    {% for i in range(4) %}
+                    <div class="col-auto d-flex gap-1 align-items-center">
+                        <input type="number" id="capital-ext-amt-{{ i }}" class="form-control form-control-sm" style="width:90px;" placeholder="0 $" min="0" step="0.01">
+                        <input type="text" id="capital-ext-note-{{ i }}" class="form-control form-control-sm" style="width:120px;" placeholder="npr. Trust, banka...">
                     </div>
+                    {% endfor %}
+                </div>
+                <div class="row g-2 align-items-end">
                     <div class="col-auto ms-auto">
                         <div id="capital-result-box" class="rounded p-2 text-center" style="min-width:180px;background:#1a1d20;">
                             <div class="text-muted small">Ukupno fali / višak</div>

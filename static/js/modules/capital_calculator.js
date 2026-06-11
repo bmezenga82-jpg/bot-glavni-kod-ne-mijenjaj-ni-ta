@@ -3,19 +3,9 @@ const LS_KEY = 'capital_calc_inputs';
 function loadSaved() {
     try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
 }
-function savePct(pairId, val) {
+function save(key, val) {
     const d = loadSaved();
-    d[`pct_${pairId}`] = val;
-    localStorage.setItem(LS_KEY, JSON.stringify(d));
-}
-function loadEarnExternal() {
-    const d = loadSaved();
-    return { earn: d.earn || 0, external: d.external || 0 };
-}
-function saveEarnExternal(earn, external) {
-    const d = loadSaved();
-    d.earn = earn;
-    d.external = external;
+    d[key] = val;
     localStorage.setItem(LS_KEY, JSON.stringify(d));
 }
 
@@ -31,6 +21,15 @@ function fmt(n) {
 
 let _pairData = [];
 let _spotTotal = 0;
+
+function getExternalTotal() {
+    const d = loadSaved();
+    let total = 0;
+    for (let i = 0; i < 4; i++) {
+        total += parseFloat(d[`ext_amt_${i}`]) || 0;
+    }
+    return total;
+}
 
 function recalcAndRender() {
     const saved = loadSaved();
@@ -75,7 +74,6 @@ function recalcAndRender() {
         tbody.appendChild(tr);
     });
 
-    // Footer — ukupno
     tfoot.innerHTML = `
         <tr class="table-secondary fw-bold">
             <td colspan="5" class="text-end text-uppercase small">Ukupno</td>
@@ -84,9 +82,10 @@ function recalcAndRender() {
             <td class="text-end ${totalFali > 0 ? 'text-danger' : 'text-success'}">${fmt(totalFali)} $</td>
         </tr>`;
 
-    // Dostupni kapital
-    const { earn, external } = loadEarnExternal();
-    const available = _spotTotal + earn + external;
+    // Earn + 4 vanjska polja
+    const earn = parseFloat(saved['earn']) || 0;
+    const externalTotal = getExternalTotal();
+    const available = _spotTotal + earn + externalTotal;
     const finalResult = available - totalFali;
 
     const resultEl = document.getElementById('capital-result-value');
@@ -100,40 +99,56 @@ function recalcAndRender() {
         }
     }
 
-    // Postavi listenere za unos pada%
     tbody.querySelectorAll('.capital-pct-input').forEach(input => {
         input.addEventListener('input', () => {
-            savePct(input.dataset.pairId, parseFloat(input.value) || 0);
+            save(`pct_${input.dataset.pairId}`, parseFloat(input.value) || 0);
             recalcAndRender();
         });
     });
 }
 
 export function initCapitalCalculator() {
-    // Earn i External inputi
-    const earnEl = document.getElementById('capital-earn');
-    const extEl = document.getElementById('capital-external');
-    const { earn, external } = loadEarnExternal();
-    if (earnEl) earnEl.value = earn || '';
-    if (extEl) extEl.value = external || '';
+    const d = loadSaved();
 
-    [earnEl, extEl].forEach(el => {
-        if (!el) return;
-        el.addEventListener('input', () => {
-            saveEarnExternal(parseFloat(earnEl?.value) || 0, parseFloat(extEl?.value) || 0);
+    // Earn
+    const earnEl = document.getElementById('capital-earn');
+    if (earnEl) {
+        earnEl.value = d['earn'] || '';
+        earnEl.addEventListener('input', () => {
+            save('earn', parseFloat(earnEl.value) || 0);
             recalcAndRender();
         });
-    });
+    }
+
+    // 4 vanjska polja (iznos + napomena)
+    for (let i = 0; i < 4; i++) {
+        const amtEl = document.getElementById(`capital-ext-amt-${i}`);
+        const noteEl = document.getElementById(`capital-ext-note-${i}`);
+        if (amtEl) {
+            amtEl.value = d[`ext_amt_${i}`] || '';
+            amtEl.addEventListener('input', () => {
+                save(`ext_amt_${i}`, parseFloat(amtEl.value) || 0);
+                recalcAndRender();
+            });
+        }
+        if (noteEl) {
+            noteEl.value = d[`ext_note_${i}`] || '';
+            noteEl.addEventListener('input', () => {
+                save(`ext_note_${i}`, noteEl.value);
+            });
+        }
+    }
 
     loadData();
 }
 
 export function refreshCapitalCalculator(accountInfo) {
-    // Dohvati spot ukupno iz account_info koji već imamo
     let spotSum = 0;
     let spotParts = [];
     if (accountInfo) {
         Object.entries(accountInfo).forEach(([key, info]) => {
+            // Preskoči testnet
+            if (key.includes('testnet')) return;
             const bal = parseFloat(info.balance);
             if (!isNaN(bal)) {
                 spotSum += bal;
@@ -152,7 +167,8 @@ function loadData() {
     fetch('/api/capital_calc_data')
         .then(r => r.json())
         .then(data => {
-            _pairData = data;
+            // Preskoči testnet parove
+            _pairData = data.filter(p => p.trading_mode !== 'testnet');
             recalcAndRender();
         })
         .catch(() => {});
