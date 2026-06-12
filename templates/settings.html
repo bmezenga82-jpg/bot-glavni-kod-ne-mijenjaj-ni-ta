@@ -602,13 +602,37 @@ document.addEventListener('DOMContentLoaded', () => {
         generalSettings.classList.remove('show');
     }
 
-      const forms = [
+  // Password forma — poseban handler jer je unutar Bootstrap collapse (display:none problematika)
+  const pwForm = document.getElementById('change-password-form');
+  if (pwForm) {
+    pwForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const current = document.getElementById('current_password').value.trim();
+      const newPw   = document.getElementById('new_password').value.trim();
+      if (!current || !newPw) {
+        showNotification('Upiši trenutnu i novu šifru.', 'error');
+        return;
+      }
+      const fd = new FormData();
+      fd.append('current_password', current);
+      fd.append('new_password', newPw);
+      try {
+        const res  = await fetch('/api/change_password', { method: 'POST', body: fd });
+        const data = await res.json();
+        showNotification(data.message, data.status === 'success' ? 'success' : 'error');
+        if (data.status === 'success') pwForm.reset();
+      } catch (err) {
+        showNotification('Request failed: ' + err.message, 'error');
+      }
+    });
+  }
+
+  const forms = [
     { id: 'general-form', url: '/api/update_general' },
     { id: 'trading-pairs-form', url: '/api/update_pairs' },
     { id: 'add-pair-form', url: '/api/add_pair' },
     { id: 'remove-pair-form', url: '/api/remove_pair' },
     { id: 'api-keys-form', url: '/api/update_api_keys' },
-    { id: 'change-password-form', url: '/api/change_password' }
   ];
 
   forms.forEach(({ id, url }) => {
@@ -616,26 +640,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form) return;
 
     form.addEventListener('submit', async e => {
-        console.log("here")
       e.preventDefault();
-
       const formData = new FormData(form);
       try {
-        const res = await fetch(url, {
-          method: 'POST',
-          body: formData
-        });
-
+        const res  = await fetch(url, { method: 'POST', body: formData });
         const data = await res.json();
         showNotification(data.message, data.status || 'info');
-
-        // Optional: refresh data or clear inputs on success
         if (data.status === 'success') {
-            window.location.reload();
+          window.location.reload();
           if (id === 'add-pair-form') form.reset();
-          if (id === 'change-password-form') form.reset();
         }
-        
       } catch (err) {
         showNotification('Request failed: ' + err.message, 'error');
       }
