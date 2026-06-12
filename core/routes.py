@@ -407,12 +407,19 @@ def register_routes(app):
 
             profit_entries_query = ProfitLog.query
 
-            if timeframe != 'all':
-                days_map = {
-                    'day': 1,
-                    'week': 7,
-                    'month': 30
-                }
+            if timeframe == 'custom':
+                date_from = request.args.get('date_from', '')
+                date_to = request.args.get('date_to', '')
+                if date_from:
+                    profit_entries_query = profit_entries_query.filter(
+                        ProfitLog.timestamp >= datetime.strptime(date_from, '%Y-%m-%d')
+                    )
+                if date_to:
+                    from datetime import date as _date
+                    dt_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+                    profit_entries_query = profit_entries_query.filter(ProfitLog.timestamp < dt_to)
+            elif timeframe != 'all':
+                days_map = {'day': 1, 'week': 7, 'month': 30}
                 days = days_map.get(timeframe)
                 if days:
                     cutoff = datetime.utcnow() - timedelta(days=days)

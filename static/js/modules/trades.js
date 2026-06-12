@@ -1,12 +1,19 @@
 let currentPage = 1;
-const itemsPerPage = 20; // Should match backend default or be configurable
+const itemsPerPage = 20;
 let currentTimeframe = 'all';
 let currentSort = 'timestamp';
 let currentSymbol = 'all';
 let currentExchange = 'all';
+let customDateFrom = '';
+let customDateTo = '';
+
 export function loadProfitLogData(page = 1) {
     currentPage = page;
-    fetch(`/api/profit_log_entries?page=${currentPage}&per_page=${itemsPerPage}&timeframe=${currentTimeframe}&sort=${currentSort}&symbol=${currentSymbol}&exchange=${currentExchange}`)
+    let url = `/api/profit_log_entries?page=${currentPage}&per_page=${itemsPerPage}&timeframe=${currentTimeframe}&sort=${currentSort}&symbol=${currentSymbol}&exchange=${currentExchange}`;
+    if (currentTimeframe === 'custom' && customDateFrom && customDateTo) {
+        url += `&date_from=${customDateFrom}&date_to=${customDateTo}`;
+    }
+    fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.error) {
@@ -93,10 +100,30 @@ export function initTradesPage() {
         })
         .catch(err => console.error('profit_log_filters error:', err));
 
+    const customRange = document.getElementById('custom-date-range');
+    const dateFrom = document.getElementById('date-from');
+    const dateTo = document.getElementById('date-to');
+    const applyCustom = document.getElementById('apply-custom-date');
+
+    // Postavi default datume (zadnjih 30 dana)
+    const today = new Date();
+    const monthAgo = new Date(today); monthAgo.setDate(today.getDate() - 30);
+    if (dateFrom) dateFrom.value = monthAgo.toISOString().split('T')[0];
+    if (dateTo) dateTo.value = today.toISOString().split('T')[0];
+
     if (timeframeSelect) {
         timeframeSelect.addEventListener('change', (e) => {
             currentTimeframe = e.target.value;
-            loadProfitLogData(1);
+            if (customRange) customRange.style.display = currentTimeframe === 'custom' ? 'flex' : 'none';
+            if (currentTimeframe !== 'custom') loadProfitLogData(1);
+        });
+    }
+
+    if (applyCustom) {
+        applyCustom.addEventListener('click', () => {
+            customDateFrom = dateFrom?.value || '';
+            customDateTo = dateTo?.value || '';
+            if (customDateFrom && customDateTo) loadProfitLogData(1);
         });
     }
 

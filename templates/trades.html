@@ -12,7 +12,14 @@
                 <option value="day">Last 24h</option>
                 <option value="week">Last 7d</option>
                 <option value="month">Last 30d</option>
+                <option value="custom">Custom...</option>
             </select>
+            <div id="custom-date-range" class="d-flex align-items-center gap-2" style="display:none !important;">
+                <input type="date" id="date-from" class="form-control form-control-sm" style="width:145px;">
+                <span class="text-white small">—</span>
+                <input type="date" id="date-to" class="form-control form-control-sm" style="width:145px;">
+                <button class="btn btn-sm btn-outline-light" id="apply-custom-date">Primijeni</button>
+            </div>
             <select id="symbol-select" class="form-select form-select-sm w-auto">
                 <option value="all">All Symbols</option>
             </select>
