@@ -73,6 +73,15 @@ class ProfitTracker:
             logger.warning("DB logging skipped: %s", e)
             db.session.rollback()
 
+        # Email notifikacije
+        try:
+            from modules.notification_service import notify_big_profit, notify_cumulative_milestone
+            notify_big_profit(symbol, exchange, profit)
+            total = db.session.query(db.func.sum(ProfitLog.profit_usdt)).scalar() or 0
+            notify_cumulative_milestone(total)
+        except Exception:
+            pass
+
     def get_total_profit(self):
         if self.log_file:
             if not os.path.exists(self.log_file):

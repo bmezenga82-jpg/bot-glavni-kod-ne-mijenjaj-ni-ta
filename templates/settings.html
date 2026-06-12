@@ -246,6 +246,233 @@
     </div>
 
 
+    <!-- Notifikacije -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white" style="font-family:'Orbitron',sans-serif;cursor:pointer;"
+            data-bs-toggle="collapse" data-bs-target="#notif-config">
+            Email notifikacije
+        </div>
+        <div id="notif-config" class="collapse">
+            <div class="card-body">
+                <p class="text-white small mb-3">Svaka notifikacija se šalje na email konfiguriran u "Email" sekciji iznad.</p>
+                <div class="row g-3">
+
+                    <!-- Bot greška -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-bot-error" data-key="bot_error">
+                                <label class="form-check-label text-white fw-bold" for="n-bot-error">Bot stao zbog greške</label>
+                            </div>
+                            <small class="text-white">Mail kad bot padne s greškom.</small>
+                        </div>
+                    </div>
+
+                    <!-- Server restart -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-restart" data-key="server_restart">
+                                <label class="form-check-label text-white fw-bold" for="n-restart">Server restart</label>
+                            </div>
+                            <small class="text-white">Mail kad se server/app ponovo pokrene.</small>
+                        </div>
+                    </div>
+
+                    <!-- Bot neaktivan -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-inactive" data-key="bot_inactive">
+                                <label class="form-check-label text-white fw-bold" for="n-inactive">Bot neaktivan</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <small class="text-white">Nema ciklusa dulje od</small>
+                                <input type="number" class="form-control form-control-sm notif-param" data-key="bot_inactive" data-param="hours"
+                                    value="2" min="1" max="48" style="width:65px;">
+                                <small class="text-white">sati</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nedostaju orderi -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-orders" data-key="missing_orders">
+                                <label class="form-check-label text-white fw-bold" for="n-orders">Nedostaju orderi</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <small class="text-white">Nema buy+sell dulje od</small>
+                                <input type="number" class="form-control form-control-sm notif-param" data-key="missing_orders" data-param="minutes"
+                                    value="10" min="5" max="120" style="width:65px;">
+                                <small class="text-white">min</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nema ciklusa X dana -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-nocycles" data-key="no_cycles">
+                                <label class="form-check-label text-white fw-bold" for="n-nocycles">Nema ciklusa X dana</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <small class="text-white">Bez ciklusa dulje od</small>
+                                <input type="number" class="form-control form-control-sm notif-param" data-key="no_cycles" data-param="days"
+                                    value="3" min="1" max="30" style="width:65px;">
+                                <small class="text-white">dana</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Saldo ispod limita -->
+                    <div class="col-12">
+                        <div class="card bg-dark border-secondary p-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-balance" data-key="balance_low">
+                                <label class="form-check-label text-white fw-bold" for="n-balance">Saldo ispod limita (po exchangeu)</label>
+                            </div>
+                            <div class="row g-2" id="balance-limits-row">
+                                {% for ex in ['binance', 'bybit', 'gateio', 'bitmart'] %}
+                                <div class="col-6 col-md-3">
+                                    <label class="text-white small">{{ ex|capitalize }}</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control notif-balance-limit" data-exchange="{{ ex }}"
+                                            value="50" min="0" step="10">
+                                        <span class="input-group-text">$</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rebalancing -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-rebal" data-key="rebalancing">
+                                <label class="form-check-label text-white fw-bold" for="n-rebal">Rebalancing potreban</label>
+                            </div>
+                            <small class="text-white">Koristi pragove iz Portfolio stranice.</small>
+                        </div>
+                    </div>
+
+                    <!-- Veliki profit -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-bigprofit" data-key="big_profit">
+                                <label class="form-check-label text-white fw-bold" for="n-bigprofit">Veliki profit</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <small class="text-white">Sell donese više od</small>
+                                <input type="number" class="form-control form-control-sm notif-param" data-key="big_profit" data-param="usdc"
+                                    value="10" min="1" style="width:70px;">
+                                <small class="text-white">USDC</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kumulativni milestone -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-milestone" data-key="cumulative_milestone">
+                                <label class="form-check-label text-white fw-bold" for="n-milestone">Kumulativni milestone</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <small class="text-white">Svaki sljedeći</small>
+                                <input type="number" class="form-control form-control-sm notif-param" data-key="cumulative_milestone" data-param="usdc"
+                                    value="500" min="10" step="50" style="width:80px;">
+                                <small class="text-white">USDC profita</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dnevni summary -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-daily" data-key="daily_summary">
+                                <label class="form-check-label text-white fw-bold" for="n-daily">Dnevni summary</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <small class="text-white">Šalji u</small>
+                                <input type="time" class="form-control form-control-sm notif-param" data-key="daily_summary" data-param="time"
+                                    value="20:00" style="width:100px;">
+                                <small class="text-white">UTC</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tjedni summary -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary h-100 p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="checkbox" class="form-check-input notif-toggle" id="n-weekly" data-key="weekly_summary">
+                                <label class="form-check-label text-white fw-bold" for="n-weekly">Tjedni summary</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                                <select class="form-select form-select-sm notif-param" data-key="weekly_summary" data-param="day" style="width:130px;">
+                                    <option value="monday">Ponedjeljak</option>
+                                    <option value="tuesday">Utorak</option>
+                                    <option value="wednesday">Srijeda</option>
+                                    <option value="thursday">Četvrtak</option>
+                                    <option value="friday">Petak</option>
+                                    <option value="saturday">Subota</option>
+                                    <option value="sunday">Nedjelja</option>
+                                </select>
+                                <input type="time" class="form-control form-control-sm notif-param" data-key="weekly_summary" data-param="time"
+                                    value="09:00" style="width:100px;">
+                                <small class="text-white">UTC</small>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary" id="notif-save-btn">Spremi notifikacije</button>
+                    <span id="notif-msg" class="small ms-2" style="display:none;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email konfiguracija -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white" style="font-family:'Orbitron',sans-serif;cursor:pointer;"
+            data-bs-toggle="collapse" data-bs-target="#email-config">
+            Email (notifikacije i reset lozinke)
+        </div>
+        <div id="email-config" class="collapse">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Gmail adresa (pošiljatelj)</label>
+                        <input type="email" class="form-control" id="email-gmail-address" placeholder="tvoj@gmail.com">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Gmail App Password</label>
+                        <input type="password" class="form-control" id="email-app-password" placeholder="xxxx xxxx xxxx xxxx">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email za primanje (tvoj)</label>
+                        <input type="email" class="form-control" id="email-admin" placeholder="tvoj@email.com">
+                        <div class="form-text">Na ovaj mail stižu notifikacije i reset link.</div>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex gap-2 align-items-center">
+                    <button class="btn btn-primary" id="email-save-btn">Spremi</button>
+                    <button class="btn btn-outline-light" id="email-test-btn">Pošalji test mail</button>
+                    <span id="email-msg" class="small ms-2" style="display:none;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Password Change -->
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-primary text-white" style="font-family: 'Orbitron', sans-serif; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#password-change" aria-expanded="false" aria-controls="password-change">
@@ -420,6 +647,90 @@ document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(element => {
     new bootstrap.Tooltip(element);
 });
 
+});
+
+// Notification config
+(async () => {
+    const r = await fetch('/api/notification_config');
+    const cfg = await r.json();
+    document.querySelectorAll('.notif-toggle').forEach(chk => {
+        const key = chk.dataset.key;
+        chk.checked = cfg[key]?.enabled || false;
+    });
+    document.querySelectorAll('.notif-param').forEach(inp => {
+        const key = inp.dataset.key;
+        const param = inp.dataset.param;
+        if (cfg[key]?.[param] !== undefined) inp.value = cfg[key][param];
+    });
+    document.querySelectorAll('.notif-balance-limit').forEach(inp => {
+        const ex = inp.dataset.exchange;
+        inp.value = cfg['balance_low']?.limits?.[ex] ?? 50;
+    });
+})();
+
+document.getElementById('notif-save-btn')?.addEventListener('click', async () => {
+    const cfg = {};
+    document.querySelectorAll('.notif-toggle').forEach(chk => {
+        const key = chk.dataset.key;
+        if (!cfg[key]) cfg[key] = {};
+        cfg[key].enabled = chk.checked;
+    });
+    document.querySelectorAll('.notif-param').forEach(inp => {
+        const key = inp.dataset.key;
+        const param = inp.dataset.param;
+        if (!cfg[key]) cfg[key] = {};
+        cfg[key][param] = inp.type === 'number' ? (parseFloat(inp.value) || 0) : inp.value;
+    });
+    if (!cfg['balance_low']) cfg['balance_low'] = { enabled: false };
+    cfg['balance_low'].limits = {};
+    document.querySelectorAll('.notif-balance-limit').forEach(inp => {
+        cfg['balance_low'].limits[inp.dataset.exchange] = parseFloat(inp.value) || 0;
+    });
+    await fetch('/api/notification_config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+    });
+    const msg = document.getElementById('notif-msg');
+    msg.textContent = 'Spremljeno!'; msg.className = 'small ms-2 text-success'; msg.style.display = '';
+    setTimeout(() => msg.style.display = 'none', 3000);
+});
+
+// Email config
+(async () => {
+    const r = await fetch('/api/email_config');
+    const d = await r.json();
+    document.getElementById('email-gmail-address').value = d.gmail_address || '';
+    document.getElementById('email-app-password').value = d.gmail_app_password || '';
+    document.getElementById('email-admin').value = d.admin_email || '';
+})();
+
+function showEmailMsg(text, type) {
+    const el = document.getElementById('email-msg');
+    el.textContent = text;
+    el.className = `small ms-2 text-${type}`;
+    el.style.display = '';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+document.getElementById('email-save-btn')?.addEventListener('click', async () => {
+    await fetch('/api/email_config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            gmail_address: document.getElementById('email-gmail-address').value.trim(),
+            gmail_app_password: document.getElementById('email-app-password').value.trim(),
+            admin_email: document.getElementById('email-admin').value.trim(),
+        })
+    });
+    showEmailMsg('Spremljeno!', 'success');
+});
+
+document.getElementById('email-test-btn')?.addEventListener('click', async () => {
+    showEmailMsg('Šaljem...', 'info');
+    const r = await fetch('/api/email_test', { method: 'POST' });
+    const d = await r.json();
+    if (d.status === 'ok') showEmailMsg('Test mail poslan!', 'success');
+    else showEmailMsg('Greška: ' + d.error, 'danger');
 });
 
 </script>

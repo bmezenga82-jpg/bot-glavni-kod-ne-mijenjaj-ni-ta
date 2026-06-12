@@ -80,6 +80,14 @@ def create_app():
     # Pokreni dnevni cleanup TradeLog zapisa starijih od 30 dana
     _start_trade_cleanup(app)
 
+    # Pokreni notification checker i pošalji server restart notifikaciju
+    try:
+        from modules.notification_service import start_notification_checker, notify_server_restart
+        start_notification_checker(app)
+        threading.Thread(target=lambda: (time.sleep(5), notify_server_restart()), daemon=True).start()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Notification checker nije pokrenut: {e}")
+
     return app
 
 

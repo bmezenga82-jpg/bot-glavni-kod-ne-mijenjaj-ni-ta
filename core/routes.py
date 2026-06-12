@@ -1,6 +1,6 @@
 # core/routes.py
 
-from flask import render_template, request, jsonify, session, send_file, flash, current_app
+from flask import render_template, request, jsonify, session, send_file, flash, current_app, url_for, redirect
 from flask_login import login_required, current_user
 
 from modules.auth import login, logout
@@ -1033,6 +1033,113 @@ def register_routes(app):
         except Exception as e:
             logger.error(f"portfolio_prices error: {e}", exc_info=True)
             return jsonify({"error": str(e)}), 500
+
+    # ── Email / Password reset ────────────────────────────────────────────────
+    @app.route("/forgot-password", methods=["GET", "POST"])
+    def forgot_password():
+        if request.method == "POST":
+            from modules.auth import generate_reset_token, users
+            from modules.email_sender import send_email, is_configured
+            if not is_configured():
+                flash("Email nije konfiguriran. Kontaktiraj admina.", "danger")
+                return render_template("forgot_password.html")
+            # Jedan korisnik (admin) — šaljemo link bez provjere emaila
+            token = generate_reset_token("admin")
+            reset_url = url_for("reset_password", token=token, _external=True)
+            try:
+                send_email(
+                    subject="CryptoBot — Reset lozinke",
+                    body=f"""
+                    <p>Primili smo zahtjev za reset lozinke.</p>
+                    <p><a href="{reset_url}" style="font-size:1.1em;">Klikni ovdje za novu lozinku</a></p>
+                    <p>Link vrijedi <strong>1 sat</strong>. Ako nisi tražio reset, ignoriraj ovaj mail.</p>
+                    <br><small>CryptoBot</small>
+                    """
+                )
+                flash("Reset link poslan na tvoj mail!", "success")
+            except Exception as e:
+                logger.error(f"forgot_password email error: {e}", exc_info=True)
+                flash(f"Greška pri slanju maila: {e}", "danger")
+            return render_template("forgot_password.html")
+        return render_template("forgot_password.html")
+
+    @app.route("/reset-password/<token>", methods=["GET", "POST"])
+    def reset_password(token):
+        from modules.auth import validate_reset_token, consume_reset_token
+        if not validate_reset_token(token):
+            flash("Link je nevažeći ili je istekao.", "danger")
+            return redirect(url_for("login_route"))
+        if request.method == "POST":
+            new_pw = request.form.get("password", "")
+            confirm_pw = request.form.get("confirm_password", "")
+            if len(new_pw) < 6:
+                flash("Lozinka mora imati barem 6 znakova.", "danger")
+                return render_template("reset_password.html", token=token)
+            if new_pw != confirm_pw:
+                flash("Lozinke se ne podudaraju.", "danger")
+                return render_template("reset_password.html", token=token)
+            consume_reset_token(token, new_pw)
+            flash("Lozinka promijenjena! Prijavi se.", "success")
+            return redirect(url_for("login_route"))
+        return render_template("reset_password.html", token=token)
+
+    @app.route("/api/email_config", methods=["GET", "POST"])
+    @login_required
+    def email_config():
+        import json, os
+        key_file = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'api_keys.json'))
+        try:
+            with open(key_file) as f:
+                keys = json.load(f)
+        except Exception:
+            keys = {}
+        if request.method == "GET":
+            cfg = keys.get("email", {})
+            return jsonify({
+                "gmail_address": cfg.get("gmail_address", ""),
+                "gmail_app_password": cfg.get("gmail_app_password", ""),
+                "admin_email": cfg.get("admin_email", ""),
+            })
+        data = request.get_json() or {}
+        keys["email"] = {
+            "gmail_address": data.get("gmail_address", ""),
+            "gmail_app_password": data.get("gmail_app_password", ""),
+            "admin_email": data.get("admin_email", ""),
+        }
+        with open(key_file, "w") as f:
+            json.dump(keys, f, indent=2)
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/email_test", methods=["POST"])
+    @login_required
+    def email_test():
+        from modules.email_sender import send_email
+        try:
+            send_email(
+                subject="CryptoBot — Test mail",
+                body="<p>Test mail radi! CryptoBot email je ispravno konfiguriran.</p>"
+            )
+            return jsonify({"status": "ok"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+    @app.route("/api/notification_config", methods=["GET", "POST"])
+    @login_required
+    def notification_config():
+        import json, os
+        key_file = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'api_keys.json'))
+        try:
+            with open(key_file) as f:
+                keys = json.load(f)
+        except Exception:
+            keys = {}
+        if request.method == "GET":
+            return jsonify(keys.get("notifications", {}))
+        data = request.get_json() or {}
+        keys["notifications"] = data
+        with open(key_file, "w") as f:
+            json.dump(keys, f, indent=2)
+        return jsonify({"status": "ok"})
 
     @app.route("/toggle_theme", methods=["POST"])
     def toggle_theme_route():

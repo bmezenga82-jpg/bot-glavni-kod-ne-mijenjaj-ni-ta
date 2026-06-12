@@ -378,6 +378,11 @@ def trade_loop(
             break
         except Exception as e:
             logger.error("Unexpected error in %s loop: %s", symbol, e)
+            try:
+                from modules.notification_service import notify_bot_error
+                notify_bot_error(symbol, settings.get('exchange', ''), str(e))
+            except Exception:
+                pass
 # The main() function and its __main__ guard appear to be unused legacy code.
 # The application is launched via app.py (Flask/SocketIO) and bots are controlled
 # via the BotManager and API calls.
