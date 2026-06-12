@@ -221,10 +221,12 @@ def _check_missing_orders(cfg):
                 _mark_sent(key)
                 missing = 'sell' if 'sell' not in sides else 'buy'
                 _send(
-                    f"🔍 CryptoBot — Nedostaje {missing} order: {pair.symbol}",
-                    f"""<h3>Nedostaju orderi</h3>
-                    <p><b>Par:</b> {pair.symbol} | <b>Exchange:</b> {pair.exchange}</p>
-                    <p>Nedostaje <b>{missing}</b> order dulje od {minutes:.0f} minuta.</p>"""
+                    f"🔍 CryptoBot — Nedostaje {missing} order: {pair.symbol} ({pair.exchange})",
+                    f"""<h3>Nedostaju orderi na {pair.exchange}</h3>
+                    <p><b>Par:</b> {pair.symbol}</p>
+                    <p><b>Exchange:</b> {pair.exchange}</p>
+                    <p>Nedostaje <b>{missing}</b> order dulje od {minutes:.0f} minuta.</p>
+                    <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
                 )
     except Exception as e:
         logger.debug(f"missing orders check error: {e}")
