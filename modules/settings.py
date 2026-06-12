@@ -153,14 +153,15 @@ def api_remove_pair():
         return jsonify({'status': 'error', 'message': 'No pair provided.'}), 400
 
     pair = TradingPair.query.get(pair_id)
-    deleted = TradingPair.query.filter_by(id=pair_id).delete()
+
+    if bot_manager.is_running(pair_id):
+        bot_manager.stop_bot(pair_id)
+
+    TradingPair.query.filter_by(id=pair_id).delete()
     db.session.commit()
 
     if pair:
         notifications.pop(pair.symbol, None)
-
-    if bot_manager.is_running(pair_id):
-        bot_manager.stop_bot(pair_id)
 
     save_notifications(notifications)
 
@@ -190,6 +191,7 @@ def api_update_api_keys():
 
 
 def api_change_password():
+    from modules.auth import _persist_password
     current_password = request.form.get('current_password')
     new_password = request.form.get('new_password')
 
@@ -199,7 +201,9 @@ def api_change_password():
     if not bcrypt.check_password_hash(users['admin']['password'], current_password):
         return jsonify({'status': 'error', 'message': 'Current password is incorrect.'}), 400
 
-    users['admin']['password'] = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    hashed = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    users['admin']['password'] = hashed
+    _persist_password(hashed)
 
     return jsonify({'status': 'success', 'message': 'Password changed successfully!'})
 

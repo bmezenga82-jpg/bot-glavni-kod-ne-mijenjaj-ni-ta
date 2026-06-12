@@ -188,9 +188,10 @@ def get_data(config, bot_running, app_instance, bot_manager_instance):
             return symbol, "N/A"
         return symbol, price
 
-    with ThreadPoolExecutor(max_workers=min(5, len(pairs))) as exc:
-        for symbol, price in exc.map(fetch_price, pairs):
-            data["prices"][symbol] = price if price != "N/A" else "N/A"
+    if pairs:
+        with ThreadPoolExecutor(max_workers=min(5, len(pairs))) as exc:
+            for symbol, price in exc.map(fetch_price, pairs):
+                data["prices"][symbol] = price if price != "N/A" else "N/A"
     return jsonify(data)
 
 

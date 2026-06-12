@@ -34,6 +34,11 @@ class BotManager:
         with self.lock:
             return self.bot_running.get(pair_id, False)
 
+    def get_status(self) -> dict:
+        """Return {pair_id: {'running': bool}} for all tracked pairs."""
+        with self.lock:
+            return {pid: {'running': running} for pid, running in self.bot_running.items()}
+
     def stop_bot(self, pair_id: int) -> None:
         """Stop and clean up the bot thread for ``pair_id``."""
         with self.lock:

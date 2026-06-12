@@ -218,32 +218,39 @@ def register_routes(app):
         return settings()
 
     @app.route("/api/update_general", methods=["POST"])
+    @login_required
     def api_update_general_route():
         return api_update_general(app.config)
 
     @app.route("/api/update_pairs", methods=["POST"])
+    @login_required
     def api_update_pairs_route():
         return api_update_pairs()
 
     @app.route("/api/add_pair", methods=["POST"])
+    @login_required
     def api_add_pair_route():
         return api_add_pair()
 
     @app.route("/api/remove_pair", methods=["POST"])
+    @login_required
     def api_remove_pair_route():
         return api_remove_pair()
 
     @app.route("/api/exchange_pairs")
+    @login_required
     def api_exchange_pairs_route():
         ex = request.args.get("exchange", "binance")
         mode = current_app.config.get("trading_mode", "testnet")
         return jsonify({"pairs": get_exchange_pairs(ex, mode)})
 
     @app.route("/api/update_api_keys", methods=["POST"])
+    @login_required
     def api_update_api_keys_route():
         return api_update_api_keys()
 
     @app.route("/api/change_password", methods=["POST"])
+    @login_required
     def api_change_password_route():
         return api_change_password()
 

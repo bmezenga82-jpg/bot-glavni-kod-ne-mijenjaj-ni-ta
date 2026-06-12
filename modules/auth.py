@@ -1,3 +1,5 @@
+import json
+import os
 import secrets
 from datetime import datetime, timedelta
 from flask import request, redirect, url_for, flash, render_template
@@ -6,7 +8,36 @@ from flask_bcrypt import Bcrypt
 
 bcrypt = Bcrypt()
 
-users = {'admin': {'password': bcrypt.generate_password_hash('password').decode('utf-8')}}
+_KEY_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'api_keys.json'))
+
+
+def _load_users():
+    try:
+        with open(_KEY_FILE) as f:
+            keys = json.load(f)
+        pw = keys.get('admin_password_hash')
+        if pw:
+            return {'admin': {'password': pw}}
+    except Exception:
+        pass
+    return {'admin': {'password': bcrypt.generate_password_hash('password').decode('utf-8')}}
+
+
+users = _load_users()
+
+
+def _persist_password(hashed: str):
+    try:
+        try:
+            with open(_KEY_FILE) as f:
+                keys = json.load(f)
+        except Exception:
+            keys = {}
+        keys['admin_password_hash'] = hashed
+        with open(_KEY_FILE, 'w') as f:
+            json.dump(keys, f, indent=2)
+    except Exception:
+        pass
 
 # {token: {'username': str, 'expires': datetime}}
 _reset_tokens = {}
@@ -55,6 +86,8 @@ def consume_reset_token(token, new_password):
     username = validate_reset_token(token)
     if not username:
         return False
-    users[username]['password'] = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    hashed = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    users[username]['password'] = hashed
+    _persist_password(hashed)
     del _reset_tokens[token]
     return True

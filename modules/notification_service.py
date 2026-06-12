@@ -167,17 +167,26 @@ def _check_balance_low(cfg):
     if not limits:
         return
     try:
-        from modules.data import get_data
-        data = get_data()
-        account = data.get('account_info', {})
-        for ex_key, info in account.items():
-            if 'testnet' in ex_key:
-                continue
-            ex_name = ex_key.split('_')[0]
-            limit = float(limits.get(ex_name, 0))
+        import json as _json
+        from core.exchange import ExchangeConnector
+        from modules.exchange_config import ExchangeConfig
+        with open(KEY_FILE) as f:
+            keys = _json.load(f)
+    except Exception as e:
+        logger.warning(f"balance check — ne mogu učitati api_keys.json: {e}")
+        return
+
+    for ex_name, limit_val in limits.items():
+        try:
+            limit = float(limit_val)
             if limit <= 0:
                 continue
-            balance = float(info.get('balance', 0))
+            exchange_id, params = ExchangeConfig.setup_exchange(ex_name, is_testnet=False, api_keys_override=keys)
+            connector = ExchangeConnector(exchange_id=exchange_id, params=params)
+            raw = connector.get_balance('USDC')
+            if raw is None or raw == 'AUTH_ERROR':
+                continue
+            balance = float(raw)
             if balance < limit:
                 key = f'balance_low_{ex_name}'
                 if _can_send(key):
@@ -189,8 +198,8 @@ def _check_balance_low(cfg):
                         <p><b>Trenutni saldo:</b> ${balance:.2f} USDC</p>
                         <p><b>Minimalni limit:</b> ${limit:.2f} USDC</p>"""
                     )
-    except Exception as e:
-        logger.debug(f"balance check error: {e}")
+        except Exception as e:
+            logger.warning(f"balance check greška za {ex_name}: {e}")
 
 def _check_missing_orders(cfg):
     minutes = _cfg(cfg, 'missing_orders', 'minutes', 10)
@@ -229,7 +238,7 @@ def _check_missing_orders(cfg):
                     <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
                 )
     except Exception as e:
-        logger.debug(f"missing orders check error: {e}")
+        logger.warning(f"missing orders check error: {e}")
 
 def _check_no_cycles(cfg):
     days = _cfg(cfg, 'no_cycles', 'days', 3)
@@ -260,7 +269,7 @@ def _check_no_cycles(cfg):
                         <p>Nema ciklusa <b>{days:.0f} dana</b> — cijena je možda izašla iz grida.</p>"""
                     )
     except Exception as e:
-        logger.debug(f"no cycles check error: {e}")
+        logger.warning(f"no cycles check error: {e}")
 
 def _check_rebalancing(cfg):
     if not _cfg(cfg, 'rebalancing'):
@@ -313,7 +322,7 @@ def _check_rebalancing(cfg):
                 <ul>{''.join(f'<li>{a}</li>' for a in alerts)}</ul>"""
             )
     except Exception as e:
-        logger.debug(f"rebalancing check error: {e}")
+        logger.warning(f"rebalancing check error: {e}")
 
 def _check_daily_summary(cfg):
     section = cfg.get('daily_summary', {})
