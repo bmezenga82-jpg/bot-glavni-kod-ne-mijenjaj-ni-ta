@@ -124,6 +124,7 @@ class ProfitTracker:
                         "symbol": p.pair.symbol if p.pair else "",
                         "profit_usdc": round(p.profit_usdc, 6),
                         "profit_crypto": round(p.profit_crypto, 6),
+                        "profit_mode": p.pair.profit_mode if p.pair else "usdc",
                     }
                 )
             return grouped

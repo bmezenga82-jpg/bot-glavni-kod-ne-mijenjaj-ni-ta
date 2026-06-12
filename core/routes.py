@@ -573,6 +573,178 @@ def register_routes(app):
             logger.error(f"Error fetching performance report: {e}", exc_info=True)
             return jsonify([]), 500
 
+    @app.route("/statistics")
+    @login_required
+    def statistics_route():
+        if "theme" not in session:
+            session["theme"] = "dark"
+        return render_template("statistics.html", notifications=[])
+
+    @app.route("/api/stats/summary")
+    @login_required
+    def stats_summary():
+        try:
+            from core.extensions import db as _db
+            rows = _db.session.query(
+                ProfitLog.symbol,
+                ProfitLog.exchange,
+                func.count(ProfitLog.id).label('cycles'),
+                func.sum(ProfitLog.profit_usdt).label('total_profit'),
+                func.avg(ProfitLog.profit_usdt).label('avg_profit'),
+                func.min(ProfitLog.timestamp).label('first_trade'),
+                func.max(ProfitLog.timestamp).label('last_trade'),
+            ).filter(ProfitLog.trading_mode != 'testnet') \
+             .group_by(ProfitLog.symbol, ProfitLog.exchange) \
+             .order_by(ProfitLog.symbol).all()
+
+            result = []
+            now = datetime.utcnow()
+            for r in rows:
+                days_active = max((now - r.first_trade).days, 1) if r.first_trade else 1
+                result.append({
+                    'symbol': r.symbol,
+                    'exchange': r.exchange,
+                    'cycles': r.cycles,
+                    'total_profit': round(r.total_profit or 0, 2),
+                    'avg_profit': round(r.avg_profit or 0, 4),
+                    'days_active': days_active,
+                    'profit_per_day': round((r.total_profit or 0) / days_active, 4),
+                    'first_trade': r.first_trade.strftime('%Y-%m-%d') if r.first_trade else '-',
+                })
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"stats_summary error: {e}", exc_info=True)
+            return jsonify([]), 500
+
+    @app.route("/api/stats/chart")
+    @login_required
+    def stats_chart():
+        try:
+            from core.extensions import db as _db
+            period = request.args.get('period', '30')
+            symbol = request.args.get('symbol', 'all')
+            cumulative = request.args.get('cumulative', '0') == '1'
+
+            query = _db.session.query(ProfitLog).filter(ProfitLog.trading_mode != 'testnet')
+            if period != 'all':
+                cutoff = datetime.utcnow() - timedelta(days=int(period))
+                query = query.filter(ProfitLog.timestamp >= cutoff)
+            if symbol != 'all':
+                query = query.filter(ProfitLog.symbol == symbol)
+
+            rows = query.order_by(ProfitLog.timestamp.asc()).all()
+
+            daily = {}
+            for r in rows:
+                day = r.timestamp.strftime('%Y-%m-%d') if r.timestamp else 'unknown'
+                daily[day] = daily.get(day, 0) + (r.profit_usdt or 0)
+
+            labels = sorted(daily.keys())
+            values = [round(daily[d], 4) for d in labels]
+
+            if cumulative:
+                total = 0
+                cum = []
+                for v in values:
+                    total += v
+                    cum.append(round(total, 4))
+                values = cum
+
+            symbols = [r[0] for r in _db.session.query(ProfitLog.symbol).filter(
+                ProfitLog.trading_mode != 'testnet').distinct().order_by(ProfitLog.symbol).all()]
+
+            return jsonify({'labels': labels, 'values': values, 'symbols': symbols})
+        except Exception as e:
+            logger.error(f"stats_chart error: {e}", exc_info=True)
+            return jsonify({'labels': [], 'values': [], 'symbols': []}), 500
+
+    @app.route("/analysis")
+    @login_required
+    def analysis_route():
+        if "theme" not in session:
+            session["theme"] = "dark"
+        return render_template("analysis.html", notifications=[])
+
+    @app.route("/api/market_analysis")
+    @login_required
+    def market_analysis_route():
+        try:
+            from core.models import TradingPair
+            from modules.market_analysis import analyze_all
+            timeframe = request.args.get('timeframe', '1h')
+            allowed = {'1h', '1d', '1w', '1M'}
+            if timeframe not in allowed:
+                timeframe = '1h'
+            pairs = TradingPair.query.filter(TradingPair.trading_mode != 'testnet').all()
+            pair_list = [{'symbol': p.symbol, 'exchange': p.exchange} for p in pairs]
+            if not pair_list:
+                return jsonify([])
+            results = analyze_all(pair_list, timeframe=timeframe)
+            return jsonify(results)
+        except Exception as e:
+            logger.error(f"market_analysis error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/dca_analysis")
+    @login_required
+    def dca_analysis_route():
+        try:
+            from core.models import TradingPair
+            from modules.market_analysis import analyze_dca_all
+            pairs = TradingPair.query.filter(TradingPair.trading_mode != 'testnet').all()
+            pair_list = [{'symbol': p.symbol, 'exchange': p.exchange,
+                          'pair_id': p.id, 'profit_mode': p.profit_mode} for p in pairs]
+            if not pair_list:
+                return jsonify([])
+            results = analyze_dca_all(pair_list)
+            return jsonify(results)
+        except Exception as e:
+            logger.error(f"dca_analysis error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/set_profit_mode", methods=["POST"])
+    @login_required
+    def set_profit_mode():
+        try:
+            from core.extensions import db as _db
+            from core.models import TradingPair
+            data = request.get_json() or {}
+            pair_id = data.get('pair_id')
+            mode = data.get('profit_mode')
+            if not pair_id or mode not in ('usdc', 'crypto'):
+                return jsonify({"error": "Neispravan zahtjev"}), 400
+            pair = TradingPair.query.get(int(pair_id))
+            if not pair:
+                return jsonify({"error": "Par nije pronađen"}), 404
+            pair.profit_mode = mode
+            _db.session.commit()
+            try:
+                from modules.settings import save_settings_yaml
+                save_settings_yaml(current_app.config)
+            except Exception as se:
+                logger.warning(f"set_profit_mode: save_settings_yaml failed: {se}")
+            return jsonify({"status": "ok", "symbol": pair.symbol, "profit_mode": mode})
+        except Exception as e:
+            logger.error(f"set_profit_mode error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/stats/delete_pair", methods=["POST"])
+    @login_required
+    def stats_delete_pair():
+        try:
+            from core.extensions import db as _db
+            data = request.get_json() or {}
+            symbol = data.get('symbol')
+            exchange = data.get('exchange')
+            if not symbol or not exchange:
+                return jsonify({"error": "symbol i exchange su obavezni"}), 400
+            deleted = _db.session.query(ProfitLog).filter_by(symbol=symbol, exchange=exchange).delete()
+            _db.session.commit()
+            return jsonify({"status": "ok", "deleted": deleted})
+        except Exception as e:
+            logger.error(f"stats_delete_pair error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
     @app.route("/toggle_theme", methods=["POST"])
     def toggle_theme_route():
         current = session.get("theme", "dark")

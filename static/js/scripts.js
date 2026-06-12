@@ -129,6 +129,7 @@ socket.on('price_update', (data) => {
     const prices = data.prices;
     const trade_status = data.trade_status || {};
     priceCache = { ...priceCache, ...prices };
+    window.priceCache = priceCache;
     if (document.getElementById('market-overview-table')) {
         import('./modules/market_data.js').then(({ updateMarketTable }) => {
             updateMarketTable(prices, priceCache);

@@ -260,7 +260,7 @@ function renderAccountInfo(accountInfo) {
             <div id="${collapseId}" class="accordion-collapse collapse${expanded.has(collapseId) ? ' show' : ''}" data-bs-parent="#account-accordion">
               <div class="accordion-body">
                 <table class="table table-sm">
-                  <thead><tr><th>Pair</th><th>Profit (USDC)</th><th>Token Profit</th><th></th></tr></thead>
+                  <thead><tr><th>Par</th><th class="text-end">Profit (USDC)</th><th class="text-end">Token Profit</th><th class="text-end" title="Što bi profit bio u USDC u trenutku prodaje">USDC ekv.</th><th class="text-end" title="Kripto qty × trenutna cijena">Kripto vrijednost</th><th></th></tr></thead>
                   <tbody id="${tbodyId}"></tbody>
                 </table>
               </div>
@@ -282,17 +282,43 @@ function renderPairProfits(grouped) {
             row.dataset.pairId = p.pair_id;
             const running = window.currentTradeStatus[p.symbol];
             if (running) anyRunning = true;
+
+            const isCrypto = p.profit_mode === 'crypto' && Number(p.profit_crypto) > 0;
+            const currentPrice = window.priceCache ? (window.priceCache[p.symbol] || 0) : 0;
+            const cryptoQty = Number(p.profit_crypto);
+            const currentVal = cryptoQty * currentPrice;
+            const usdcEquiv = Number(p.profit_usdc);
+
+            let cryptoValCell = '<td class="text-end text-muted">—</td>';
+            if (isCrypto && currentPrice > 0) {
+                const diff = currentVal - usdcEquiv;
+                const color = diff >= 0 ? 'text-success' : 'text-danger';
+                const sign = diff >= 0 ? '+' : '';
+                cryptoValCell = `<td class="text-end">
+                    <span class="fw-bold ${color}">${currentVal.toFixed(2)} $</span>
+                    <div style="font-size:0.7rem;" class="${color}">(${sign}${diff.toFixed(2)} $ vs USDC)</div>
+                </td>`;
+            } else if (isCrypto) {
+                cryptoValCell = `<td class="text-end text-muted" style="font-size:0.75rem;">čeka cijenu...</td>`;
+            }
+
+            const usdcEquivCell = isCrypto
+                ? `<td class="text-end text-info">${usdcEquiv.toFixed(4)} $</td>`
+                : `<td class="text-end text-muted">—</td>`;
+
             row.innerHTML = `
                 <td>${p.symbol}</td>
-                <td id="profit-usdc-info-${p.pair_id}">${Number(p.profit_usdc).toFixed(4)}</td>
-                <td id="profit-crypto-info-${p.pair_id}">${Number(p.profit_crypto).toFixed(6)}</td>
+                <td id="profit-usdc-info-${p.pair_id}" class="text-end">${isCrypto ? '—' : usdcEquiv.toFixed(4)}</td>
+                <td id="profit-crypto-info-${p.pair_id}" class="text-end">${cryptoQty.toFixed(6)}</td>
+                ${usdcEquivCell}
+                ${cryptoValCell}
                 <td>
                     <button class="btn btn-xxs btn-secondary${running ? ' disabled' : ''}" style="padding:1px 4px;font-size:0.55rem;" onclick="resetProfit(${p.pair_id})">Reset</button>
                     <button class="btn btn-xxs btn-danger ms-1 remove-pair${running ? ' disabled' : ''}" style="padding:1px 4px;font-size:0.55rem;" onclick="removePairProfit(${p.pair_id})"><i class="bi bi-x-circle"></i></button>
                 </td>`;
             tbody.appendChild(row);
-            totalUsdc += Number(p.profit_usdc);
-            totalCrypto += Number(p.profit_crypto);
+            totalUsdc += usdcEquiv;
+            totalCrypto += cryptoQty;
         });
         const resetAllBtn = document.getElementById(`reset-all-${key}`);
         if (resetAllBtn) {

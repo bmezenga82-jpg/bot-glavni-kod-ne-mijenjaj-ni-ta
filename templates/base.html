@@ -26,6 +26,8 @@
                     <a class="nav-link {% if request.path == '/' %}current-page{% endif %}" href="/">Dashboard</a>
                     <a class="nav-link {% if request.path.startswith('/trades') %}current-page{% endif %}" href="/trades">Trades</a>
                     <a class="nav-link {% if request.path.startswith('/backtest') %}current-page{% endif %}" href="/backtest">Backtest</a>
+                    <a class="nav-link {% if request.path.startswith('/statistics') %}current-page{% endif %}" href="/statistics">Statistics</a>
+                    <a class="nav-link {% if request.path.startswith('/analysis') %}current-page{% endif %}" href="/analysis">Analiza</a>
                     <a class="nav-link {% if request.path.startswith('/settings') %}current-page{% endif %}" href="/settings">Settings</a>
                 </div>
                 <form class="d-flex" role="search">

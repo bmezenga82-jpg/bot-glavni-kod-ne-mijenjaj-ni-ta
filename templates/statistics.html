@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- Profit Graf -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-dark text-white d-flex align-items-center gap-3 flex-wrap">
+            <span class="fw-bold">Profit Graf</span>
+            <select id="chart-period" class="form-select form-select-sm w-auto">
+                <option value="7">Zadnjih 7 dana</option>
+                <option value="30" selected>Zadnjih 30 dana</option>
+                <option value="90">Zadnjih 90 dana</option>
+                <option value="all">Sve</option>
+            </select>
+            <select id="chart-symbol" class="form-select form-select-sm w-auto">
+                <option value="all">Svi parovi</option>
+            </select>
+            <div class="form-check form-switch mb-0 ms-2">
+                <input class="form-check-input" type="checkbox" id="chart-cumulative">
+                <label class="form-check-label text-white" for="chart-cumulative">Kumulativno</label>
+            </div>
+        </div>
+        <div class="card-body" style="position:relative; height:300px;">
+            <canvas id="profit-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Statistike po paru -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold">Statistike po paru</div>
+        <div class="card-body p-2">
+            <div class="table-responsive">
+                <table class="table table-sm table-dark table-bordered mb-0" id="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Par</th>
+                            <th class="text-end">Ciklusi</th>
+                            <th class="text-end" style="color:#6ea8fe;">Ukupan profit</th>
+                            <th class="text-end" style="color:#75b798;">Prosjek/ciklus</th>
+                            <th class="text-end" style="color:#ea868f;">Profit/dan</th>
+                            <th class="text-end">Dani aktivno</th>
+                            <th class="text-end">1. trade</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-body">
+                        <tr><td colspan="7" class="text-center text-muted py-3">Učitavanje...</td></tr>
+                    </tbody>
+                    <tfoot id="stats-foot"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    import { initStatistics } from '/static/js/modules/statistics.js';
+    initStatistics();
+</script>
+{% endblock %}

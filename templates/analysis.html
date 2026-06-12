@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    #analysisTabs .nav-link { color: #aaa; border: none; border-bottom: 3px solid transparent; border-radius: 0; }
+    #analysisTabs .nav-link:hover { color: #fff; background: transparent; }
+    #analysisTabs .nav-link.active { color: #fff; background: transparent; border-bottom: 3px solid #6ea8fe; }
+</style>
+<div class="container-fluid py-3">
+
+    <div class="card shadow-sm">
+        <!-- Tabovi -->
+        <div class="card-header bg-dark p-0">
+            <ul class="nav nav-tabs border-0" id="analysisTabs">
+                <li class="nav-item">
+                    <button class="nav-link active text-white" id="tab-dca-btn" data-bs-toggle="tab" data-bs-target="#tab-dca">
+                        Spot / DCA
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-white" id="tab-grid-btn" data-bs-toggle="tab" data-bs-target="#tab-grid">
+                        Grid analiza
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="tab-content">
+
+            <!-- TAB 1: Grid analiza -->
+            <div class="tab-pane fade" id="tab-grid">
+                <div class="card-body bg-dark d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3 border-bottom border-secondary">
+                    <select id="analysis-timeframe" class="form-select form-select-sm w-auto">
+                        <option value="1h" selected>1h — kratkoročno</option>
+                        <option value="1d">1d — srednji rok</option>
+                        <option value="1w">1W — dugoročno</option>
+                        <option value="1M">1M — trendovi</option>
+                    </select>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small" id="grid-timestamp"></span>
+                        <button class="btn btn-outline-light btn-sm" onclick="window._refreshGrid()">&#8635; Osvježi</button>
+                    </div>
+                </div>
+
+                <div id="grid-loading" class="text-center py-5 text-muted">
+                    <div class="spinner-border mb-2" role="status"></div>
+                    <div>Dohvaćam podatke, može potrajati 10–30s...</div>
+                </div>
+                <div id="grid-error" class="alert alert-danger m-3" style="display:none;"></div>
+                <div class="table-responsive" id="grid-table-wrap" style="display:none;">
+                    <table class="table table-sm table-dark table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Par</th>
+                                <th class="text-end">Cijena</th>
+                                <th class="text-center">RSI (14)</th>
+                                <th class="text-center">Trend</th>
+                                <th class="text-center">Volatilnost</th>
+                                <th class="text-center">BB pozicija</th>
+                                <th class="text-center">Score</th>
+                                <th class="text-center">Grid?</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grid-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="card-footer bg-dark text-white small">
+                    <div class="mb-1 fw-bold">Pojašnjenje kolona:</div>
+                    <div><span class="fw-bold">RSI (14)</span> — mjeri je li par preprodan ili overbought. Zeleno &lt;30 (oversold, dobar entry), crveno &gt;70 (overbought, rizično). Broj 14 = gleda zadnjih 14 perioda.</div>
+                    <div class="mt-1"><span class="fw-bold">Trend</span> — usporedba EMA50 i EMA200. <span class="text-success">Sideways</span> = cijena bez jasnog smjera, idealno za grid. Uptrend/Downtrend = jak smjer, grid manje efikasan.</div>
+                    <div class="mt-1"><span class="fw-bold">Volatilnost</span> — prosječni pomak cijene po periodu (ATR%). Npr. 1.24% na 1h = cijena se u prosjeku miče 1.24% svaki sat. Više = grid češće okida = više zarade. Ispod 0.5% je premalo, iznad 2% odlično.</div>
+                    <div class="mt-1"><span class="fw-bold">BB pozicija</span> — gdje je cijena unutar Bollinger Bandova. 0% = donja granica (relativno niska cijena, dobar entry). 100% = gornja granica (relativno visoka).</div>
+                    <div class="mt-1"><span class="fw-bold">Score (0–100)</span> — agregirani broj: Trend 30% + Volatilnost 30% + RSI 25% + BB 15%. <span class="text-success fw-bold">Viši score = bolji za grid</span> (par je volatilniji i sideways = češće okidanje). 68+ = Dobar, 50–67 = Neutralan, ispod 50 = Loš. Sortirano od najboljeg prema najlošijem.</div>
+                    <div class="mt-1"><span class="fw-bold">Timeframe</span> — 1h = zadnjih ~9 dana, 1d = ~7 mjeseci, 1W = ~2 godine, 1M = makro slika.</div>
+                    <div class="mt-2 text-warning">&#9888; Samo informativno — nije financijski savjet.</div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Spot / DCA -->
+            <div class="tab-pane fade show active" id="tab-dca">
+                <div class="card-body bg-dark d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3 border-bottom border-secondary">
+                    <span class="text-muted small">Analiza bazirana na dnevnim podacima (zadnjih 500 dana) + tjedni RSI</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small" id="dca-timestamp"></span>
+                        <button class="btn btn-outline-light btn-sm" onclick="window._refreshDca()">&#8635; Osvježi</button>
+                    </div>
+                </div>
+
+                <div id="dca-loading" class="text-center py-5 text-muted" style="display:none;">
+                    <div class="spinner-border mb-2" role="status"></div>
+                    <div>Dohvaćam podatke, može potrajati 10–30s...</div>
+                </div>
+                <div id="dca-error" class="alert alert-danger m-3" style="display:none;"></div>
+                <div class="table-responsive" id="dca-table-wrap" style="display:none;">
+                    <table class="table table-sm table-dark table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Par</th>
+                                <th class="text-end">Cijena</th>
+                                <th class="text-center">RSI dnevni</th>
+                                <th class="text-center">RSI tjedni</th>
+                                <th class="text-center">vs 200MA</th>
+                                <th class="text-center">Od vrha (52t)</th>
+                                <th class="text-center">Score</th>
+                                <th class="text-center">DCA?</th>
+                                <th class="text-center">Profit mod</th>
+                                <th class="text-center">Preporuka</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dca-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="card-footer bg-dark text-white small">
+                    <div class="mb-1 fw-bold">Pojašnjenje kolona:</div>
+                    <div><span class="fw-bold">RSI dnevni</span> — isti RSI ali na dnevnim svijećnjacima. Ispod 30 = cijena je jako pala zadnjih tjednima, potencijalno dobar entry za dugoročno.</div>
+                    <div class="mt-1"><span class="fw-bold">RSI tjedni</span> — RSI na tjednim svijećnjacima, najvažniji signal za dugoročno. Historijski, RSI tjedni ispod 30 na BTC-u i altcoinima bio je generacijsko dno. Ispod 40 = jako dobar entry, ispod 50 = dobar.</div>
+                    <div class="mt-1"><span class="fw-bold">vs 200MA</span> — koliko je cijena ispod ili iznad 200-dnevnog prosjeka. Npr. −30% znači da je cijena 30% ispod prosjeka zadnjih 200 dana. Ispod 200MA = bear tržište, što više ispod = više potencijala za oporavak.</div>
+                    <div class="mt-1"><span class="fw-bold">Od vrha (52t)</span> — koliko je cijena pala od najviše točke u zadnjih 52 tjedna (godinu dana). Npr. −60% = cijena je na 40% od godišnjeg vrha. Veći pad = veći potencijal rasta, ali i veći rizik.</div>
+                    <div class="mt-1"><span class="fw-bold">Score (0–100)</span> — agregirani broj: RSI tjedni 35% + vs 200MA 30% + RSI dnevni 20% + Od vrha 15%. <span class="text-success fw-bold">Viši score = bolji za DCA</span> (par je više pao, oversold, ispod 200MA = bolji trenutak za dugoročnu kupnju). 68+ = Akumuliraj, 50–67 = Čekaj bolji entry, ispod 50 = Preskupo za DCA.</div>
+                    <div class="mt-1"><span class="fw-bold">Primjer</span> — da je BTC na 60k (−45% od vrha, tjedni RSI 32, −20% ispod 200MA) score bi bio visok = signal za akumulaciju. Na 75k (−30% od vrha, RSI 45) = neutralno, čekaj.</div>
+                    <div class="mt-2 text-warning">&#9888; Samo informativno — nije financijski savjet. Indikatori su bazirani na prošlim podacima.</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initAnalysis } from '/static/js/modules/analysis.js';
+    initAnalysis();
+</script>
+{% endblock %}

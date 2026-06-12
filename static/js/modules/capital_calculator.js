@@ -25,35 +25,21 @@ let _spotTotal = 0;
 function getExternalTotal() {
     const d = loadSaved();
     let total = 0;
-    for (let i = 0; i < 4; i++) {
-        total += parseFloat(d[`ext_amt_${i}`]) || 0;
-    }
+    for (let i = 0; i < 4; i++) total += parseFloat(d[`ext_amt_${i}`]) || 0;
     return total;
 }
 
-function recalcAndRender() {
-    const saved = loadSaved();
+// Gradi tablicu jednom — inputi se ne diraju pri recalcu
+function renderTable() {
     const tbody = document.getElementById('capital-calc-body');
-    const tfoot = document.getElementById('capital-calc-foot');
-    if (!tbody || !tfoot) return;
-
-    let totalNeeded = 0;
-    let totalInvested = 0;
-    let totalFali = 0;
-
+    if (!tbody) return;
+    const saved = loadSaved();
     tbody.innerHTML = '';
 
     _pairData.forEach(p => {
         const savedPct = parseFloat(saved[`pct_${p.pair_id}`]) || 0;
-        const steps = calcSteps(savedPct, p.buy_pct);
-        const needed = steps * p.usdc_amount;
-        const fali = Math.max(0, needed - p.invested);
-
-        totalNeeded += needed;
-        totalInvested += p.invested;
-        totalFali += fali;
-
         const tr = document.createElement('tr');
+        tr.dataset.pairId = p.pair_id;
         tr.innerHTML = `
             <td>
                 <div class="fw-bold text-primary" style="font-size:0.85rem;">${p.symbol}</div>
@@ -67,60 +53,95 @@ function recalcAndRender() {
                     value="${savedPct || ''}" min="0" max="99" step="1"
                     style="width:80px;display:inline-block;">
             </td>
-            <td class="text-end">${steps}</td>
-            <td class="text-end fw-bold text-info">${fmt(needed)} $</td>
-            <td class="text-end text-warning">${fmt(p.invested)} $</td>
-            <td class="text-end fw-bold ${fali > 0 ? 'text-danger' : 'text-success'}">${fmt(fali)} $</td>`;
+            <td class="text-end calc-steps"></td>
+            <td class="text-end fw-bold calc-needed" style="color:#6ea8fe;"></td>
+            <td class="text-end" style="color:#75b798;">${fmt(p.invested)} $</td>
+            <td class="text-end fw-bold calc-fali" style="color:#ea868f;"></td>`;
         tbody.appendChild(tr);
+    });
+
+    // Postavi listenere samo jednom pri renderu
+    tbody.querySelectorAll('.capital-pct-input').forEach(input => {
+        input.addEventListener('input', () => {
+            save(`pct_${input.dataset.pairId}`, parseFloat(input.value) || 0);
+            recalcValues(); // samo ažurira ćelije, ne dira inpute
+        });
+    });
+
+    recalcValues();
+}
+
+// Ažurira samo izračunate ćelije — inputi se ne diraju
+function recalcValues() {
+    const saved = loadSaved();
+    const tbody = document.getElementById('capital-calc-body');
+    const tfoot = document.getElementById('capital-calc-foot');
+    if (!tbody || !tfoot) return;
+
+    let totalNeeded = 0;
+    let totalInvested = 0;
+    let totalFali = 0;
+
+    _pairData.forEach(p => {
+        const tr = tbody.querySelector(`tr[data-pair-id="${p.pair_id}"]`);
+        if (!tr) return;
+        const savedPct = parseFloat(saved[`pct_${p.pair_id}`]) || 0;
+        const steps = calcSteps(savedPct, p.buy_pct);
+        const needed = steps * p.usdc_amount;
+        const fali = Math.max(0, needed - p.invested);
+
+        tr.querySelector('.calc-steps').textContent = steps;
+        tr.querySelector('.calc-needed').textContent = fmt(needed) + ' $';
+        const faliEl = tr.querySelector('.calc-fali');
+        faliEl.textContent = fmt(fali) + ' $';
+        faliEl.className = 'text-end fw-bold calc-fali';
+        faliEl.style.color = '#ea868f';
+
+        totalNeeded += needed;
+        totalInvested += p.invested;
+        totalFali += fali;
     });
 
     tfoot.innerHTML = `
         <tr class="table-secondary fw-bold">
             <td colspan="5" class="text-end text-uppercase small">Ukupno</td>
-            <td class="text-end text-info">${fmt(totalNeeded)} $</td>
-            <td class="text-end text-warning">${fmt(totalInvested)} $</td>
-            <td class="text-end ${totalFali > 0 ? 'text-danger' : 'text-success'}">${fmt(totalFali)} $</td>
+            <td class="text-end fw-bold" style="color:#6ea8fe;">${fmt(totalNeeded)} $</td>
+            <td class="text-end fw-bold" style="color:#75b798;">${fmt(totalInvested)} $</td>
+            <td class="text-end fw-bold" style="color:#ea868f;">${fmt(totalFali)} $</td>
         </tr>`;
 
-    // Earn + 4 vanjska polja
-    const earn = parseFloat(saved['earn']) || 0;
-    const externalTotal = getExternalTotal();
-    const available = _spotTotal + earn + externalTotal;
+    recalcResult(totalFali);
+}
+
+function recalcResult(totalFali) {
+    const d = loadSaved();
+    const earn = parseFloat(d['earn']) || 0;
+    const available = _spotTotal + earn + getExternalTotal();
     const finalResult = available - totalFali;
 
     const resultEl = document.getElementById('capital-result-value');
-    if (resultEl) {
-        if (finalResult >= 0) {
-            resultEl.textContent = `+ ${fmt(finalResult)} $`;
-            resultEl.className = 'fw-bold fs-5 text-success';
-        } else {
-            resultEl.textContent = `- ${fmt(Math.abs(finalResult))} $`;
-            resultEl.className = 'fw-bold fs-5 text-danger';
-        }
+    if (!resultEl) return;
+    if (finalResult >= 0) {
+        resultEl.textContent = `+ ${fmt(finalResult)} $`;
+        resultEl.className = 'fw-bold fs-5 text-success';
+    } else {
+        resultEl.textContent = `- ${fmt(Math.abs(finalResult))} $`;
+        resultEl.className = 'fw-bold fs-5 text-danger';
     }
-
-    tbody.querySelectorAll('.capital-pct-input').forEach(input => {
-        input.addEventListener('input', () => {
-            save(`pct_${input.dataset.pairId}`, parseFloat(input.value) || 0);
-            recalcAndRender();
-        });
-    });
 }
 
 export function initCapitalCalculator() {
     const d = loadSaved();
 
-    // Earn
     const earnEl = document.getElementById('capital-earn');
     if (earnEl) {
         earnEl.value = d['earn'] || '';
         earnEl.addEventListener('input', () => {
             save('earn', parseFloat(earnEl.value) || 0);
-            recalcAndRender();
+            recalcValues();
         });
     }
 
-    // 4 vanjska polja (iznos + napomena)
     for (let i = 0; i < 4; i++) {
         const amtEl = document.getElementById(`capital-ext-amt-${i}`);
         const noteEl = document.getElementById(`capital-ext-note-${i}`);
@@ -128,14 +149,12 @@ export function initCapitalCalculator() {
             amtEl.value = d[`ext_amt_${i}`] || '';
             amtEl.addEventListener('input', () => {
                 save(`ext_amt_${i}`, parseFloat(amtEl.value) || 0);
-                recalcAndRender();
+                recalcValues();
             });
         }
         if (noteEl) {
             noteEl.value = d[`ext_note_${i}`] || '';
-            noteEl.addEventListener('input', () => {
-                save(`ext_note_${i}`, noteEl.value);
-            });
+            noteEl.addEventListener('input', () => save(`ext_note_${i}`, noteEl.value));
         }
     }
 
@@ -147,7 +166,6 @@ export function refreshCapitalCalculator(accountInfo) {
     let spotParts = [];
     if (accountInfo) {
         Object.entries(accountInfo).forEach(([key, info]) => {
-            // Preskoči testnet
             if (key.includes('testnet')) return;
             const bal = parseFloat(info.balance);
             if (!isNaN(bal)) {
@@ -160,16 +178,15 @@ export function refreshCapitalCalculator(accountInfo) {
     _spotTotal = spotSum;
     const spotEl = document.getElementById('capital-spot-display');
     if (spotEl) spotEl.textContent = spotParts.length ? spotParts.join(' | ') : '0 $';
-    recalcAndRender();
+    recalcValues();
 }
 
 function loadData() {
     fetch('/api/capital_calc_data')
         .then(r => r.json())
         .then(data => {
-            // Preskoči testnet parove
             _pairData = data.filter(p => p.trading_mode !== 'testnet');
-            recalcAndRender();
+            renderTable(); // jednom gradi tablicu s inputima
         })
         .catch(() => {});
 }
