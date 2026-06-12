@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    #portfolioTabs .nav-link { color: #aaa; border: none; border-bottom: 3px solid transparent; border-radius: 0; }
+    #portfolioTabs .nav-link:hover { color: #fff; background: transparent; }
+    #portfolioTabs .nav-link.active { color: #fff; background: transparent; border-bottom: 3px solid #6ea8fe; }
+    .pf-badge-active { background: #198754; }
+    .pf-badge-inactive { background: #444; }
+</style>
+<div class="container-fluid py-3">
+
+    <!-- CMC API ključ -->
+    <div class="card shadow-sm mb-3 bg-dark">
+        <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-3">
+            <span class="text-white fw-bold small">CoinMarketCap API ključ:</span>
+            <input type="password" id="cmc-api-key-input" class="form-control form-control-sm"
+                   placeholder="Unesi CMC API ključ..." style="max-width:340px;">
+            <button class="btn btn-sm btn-outline-light" id="cmc-save-btn">Spremi</button>
+            <span id="cmc-save-msg" class="small" style="display:none;"></span>
+            <a href="https://coinmarketcap.com/api/" target="_blank" class="small text-info ms-auto">Registriraj se za besplatan CMC API ključ</a>
+        </div>
+    </div>
+
+    <!-- Portfoliji + Overview tabovi -->
+    <div class="card shadow-sm bg-dark">
+        <div class="card-header bg-dark p-0 d-flex align-items-center">
+            <ul class="nav nav-tabs border-0 flex-grow-1" id="portfolioTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview">Overview</button>
+                </li>
+                <!-- Dinamički tabovi za portfolije -->
+            </ul>
+            <div class="d-flex gap-2 px-2">
+                <button class="btn btn-sm btn-outline-success" id="btn-new-portfolio">+ Novi portfolio</button>
+            </div>
+        </div>
+
+        <div class="tab-content">
+            <!-- Overview tab -->
+            <div class="tab-pane fade show active" id="tab-overview">
+                <div class="card-body bg-dark text-center py-5" id="overview-loading">
+                    <div class="spinner-border mb-2" role="status"></div>
+                    <div class="text-white">Učitavam portfolije...</div>
+                </div>
+                <div id="overview-empty" style="display:none;" class="text-center py-5 text-white">
+                    Nema portfolija. Stvori prvi portfolio.
+                </div>
+                <div id="overview-content" style="display:none;">
+                    <div class="px-3 py-2 border-bottom border-secondary d-flex flex-wrap gap-3 align-items-center">
+                        <span class="text-white fw-bold">Ukupna vrijednost svih portfolija</span>
+                        <span id="overview-total-value" class="fw-bold fs-5 text-success">—</span>
+                        <div class="d-flex align-items-center gap-1 ms-2">
+                            <span class="text-white small">Prag:</span>
+                            <input type="number" id="overview-threshold" class="form-control form-control-sm"
+                                value="5" min="1" max="50" step="0.5" style="width:65px;">
+                            <span class="text-white small">%</span>
+                        </div>
+                        <div class="ms-auto d-flex gap-2 align-items-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                    id="pf-filter-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    Portfoliji
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark" id="pf-filter-list" style="min-width:200px;"></ul>
+                            </div>
+                            <span class="text-muted small pf-last-refresh"></span>
+                            <button class="btn btn-sm btn-outline-light" id="overview-refresh-btn">&#8635; Osvježi cijene</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-dark table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Token</th>
+                                    <th class="text-end">Ukupna količina</th>
+                                    <th class="text-end">Cijena (USD)</th>
+                                    <th class="text-end">Vrijednost (USD)</th>
+                                    <th class="text-end">% ukupno</th>
+                                    <th class="text-end">Cilj %</th>
+                                    <th class="text-center">Rebalancing</th>
+                                    <th class="text-center">Preporuka</th>
+                                    <th class="text-center">Portf.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overview-body"></tbody>
+                            <tfoot id="overview-foot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dinamički portfolio tab-paneovi se appendaju direktno ovdje iz JS-a -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal: novi portfolio -->
+<div class="modal fade" id="newPortfolioModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Novi portfolio</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label text-white">Naziv portfolija</label>
+                <input type="text" class="form-control" id="new-pf-name" placeholder="npr. Glavni, Altcoins...">
+                <label class="form-label text-white mt-3">Prag rebalancinga (%)</label>
+                <input type="number" class="form-control" id="new-pf-threshold" value="5" min="1" max="50" step="0.5">
+                <div class="form-text text-white">Koliko % mora odstupati da se pokaže preporuka za rebalancing.</div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Odustani</button>
+                <button class="btn btn-success" id="create-portfolio-btn">Stvori</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: CSV upload -->
+<div class="modal fade" id="csvModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Uvezi CSV iz CoinMarketCap</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-white small">Na CoinMarketCap.com idi na Portfolio → izvezi CSV. Stupci koje tražim: Symbol i Amount (ili Holdings/Quantity).</p>
+                <input type="file" class="form-control" id="csv-file-input" accept=".csv">
+                <div id="csv-result" class="mt-2 small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Zatvori</button>
+                <button class="btn btn-primary" id="csv-upload-btn">Uvezi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: dodaj token -->
+<div class="modal fade" id="addTokenModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Dodaj token</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label text-white">Symbol (npr. BTC, ETH)</label>
+                <input type="text" class="form-control mb-2" id="add-token-symbol" placeholder="BTC">
+                <label class="form-label text-white">Naziv (opcionalno)</label>
+                <input type="text" class="form-control mb-2" id="add-token-name" placeholder="Bitcoin">
+                <label class="form-label text-white">Količina</label>
+                <input type="number" class="form-control" id="add-token-amount" placeholder="0.0" step="any" min="0">
+            </div>
+            <div class="modal-footer border-secondary">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Odustani</button>
+                <button class="btn btn-success" id="add-token-btn">Dodaj</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initPortfolio } from '/static/js/modules/portfolio.js';
+    initPortfolio();
+</script>
+{% endblock %}

@@ -69,3 +69,30 @@ class PairProfit(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     pair = db.relationship('TradingPair', backref=db.backref('pair_profit', uselist=False))
+
+
+class Portfolio(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    threshold_pct = db.Column(db.Float, default=5.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    holdings = db.relationship('PortfolioHolding', backref='portfolio', lazy=True, cascade='all, delete-orphan')
+
+
+class PortfolioHolding(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    portfolio_id = db.Column(db.Integer, db.ForeignKey('portfolio.id'), nullable=False)
+    symbol = db.Column(db.String(20), nullable=False)
+    name = db.Column(db.String(100), default='')
+    amount = db.Column(db.Float, nullable=False, default=0.0)
+    target_pct = db.Column(db.Float, default=0.0)
+    include_rebalancing = db.Column(db.Boolean, default=True)
+
+    __table_args__ = (db.UniqueConstraint('portfolio_id', 'symbol', name='uix_portfolio_symbol'),)
+
+
+class GlobalTarget(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    symbol = db.Column(db.String(20), nullable=False, unique=True)
+    target_pct = db.Column(db.Float, default=0.0)
+    include_rebalancing = db.Column(db.Boolean, default=True)

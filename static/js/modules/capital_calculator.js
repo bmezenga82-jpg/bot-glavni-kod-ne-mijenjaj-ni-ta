@@ -54,9 +54,9 @@ function renderTable() {
                     style="width:80px;display:inline-block;">
             </td>
             <td class="text-end calc-steps"></td>
-            <td class="text-end fw-bold calc-needed" style="color:#6ea8fe;"></td>
-            <td class="text-end" style="color:#75b798;">${fmt(p.invested)} $</td>
-            <td class="text-end fw-bold calc-fali" style="color:#ea868f;"></td>`;
+            <td class="text-end fw-bold calc-needed" style="color:#6ea8fe !important;"></td>
+            <td class="text-end" style="color:#75b798 !important;">${fmt(p.invested)} $</td>
+            <td class="text-end fw-bold calc-fali" style="color:#ea868f !important;"></td>`;
         tbody.appendChild(tr);
     });
 
@@ -95,7 +95,7 @@ function recalcValues() {
         const faliEl = tr.querySelector('.calc-fali');
         faliEl.textContent = fmt(fali) + ' $';
         faliEl.className = 'text-end fw-bold calc-fali';
-        faliEl.style.color = '#ea868f';
+        faliEl.style.setProperty('color', '#ea868f', 'important');
 
         totalNeeded += needed;
         totalInvested += p.invested;
@@ -105,9 +105,9 @@ function recalcValues() {
     tfoot.innerHTML = `
         <tr class="table-secondary fw-bold">
             <td colspan="5" class="text-end text-uppercase small">Ukupno</td>
-            <td class="text-end fw-bold" style="color:#6ea8fe;">${fmt(totalNeeded)} $</td>
-            <td class="text-end fw-bold" style="color:#75b798;">${fmt(totalInvested)} $</td>
-            <td class="text-end fw-bold" style="color:#ea868f;">${fmt(totalFali)} $</td>
+            <td class="text-end fw-bold" style="color:#6ea8fe !important;">${fmt(totalNeeded)} $</td>
+            <td class="text-end fw-bold" style="color:#75b798 !important;">${fmt(totalInvested)} $</td>
+            <td class="text-end fw-bold" style="color:#ea868f !important;">${fmt(totalFali)} $</td>
         </tr>`;
 
     recalcResult(totalFali);
@@ -171,13 +171,13 @@ export function refreshCapitalCalculator(accountInfo) {
             if (!isNaN(bal)) {
                 spotSum += bal;
                 const [ex] = key.split('_');
-                spotParts.push(`${ex}: ${fmt(bal)} $`);
+                spotParts.push(`<span class="text-white">${ex}:</span> <span style="color:#75b798 !important;">${fmt(bal)} $</span>`);
             }
         });
     }
     _spotTotal = spotSum;
     const spotEl = document.getElementById('capital-spot-display');
-    if (spotEl) spotEl.textContent = spotParts.length ? spotParts.join(' | ') : '0 $';
+    if (spotEl) spotEl.innerHTML = spotParts.length ? spotParts.join(' <span class="text-white">|</span> ') : '0 $';
     recalcValues();
 }
 

@@ -745,6 +745,295 @@ def register_routes(app):
             logger.error(f"stats_delete_pair error: {e}", exc_info=True)
             return jsonify({"error": str(e)}), 500
 
+    # ── Portfolio / CMC ──────────────────────────────────────────────────────
+    @app.route("/portfolio")
+    @login_required
+    def portfolio_route():
+        if "theme" not in session:
+            session["theme"] = "dark"
+        return render_template("portfolio.html", notifications=[])
+
+    @app.route("/api/cmc_key", methods=["GET", "POST"])
+    @login_required
+    def cmc_key_route():
+        import json, os
+        key_file = os.path.join(os.path.dirname(__file__), '..', 'api_keys.json')
+        key_file = os.path.normpath(key_file)
+        try:
+            with open(key_file) as f:
+                keys = json.load(f)
+        except Exception:
+            keys = {}
+        if request.method == 'GET':
+            cmc = keys.get('coinmarketcap', {})
+            return jsonify({"api_key": cmc.get('api_key', '')})
+        data = request.get_json() or {}
+        keys['coinmarketcap'] = {'api_key': data.get('api_key', '')}
+        with open(key_file, 'w') as f:
+            json.dump(keys, f, indent=2)
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/portfolio/list")
+    @login_required
+    def portfolio_list():
+        from core.models import Portfolio
+        portfolios = Portfolio.query.order_by(Portfolio.created_at).all()
+        return jsonify([{"id": p.id, "name": p.name, "threshold_pct": p.threshold_pct} for p in portfolios])
+
+    @app.route("/api/portfolio/create", methods=["POST"])
+    @login_required
+    def portfolio_create():
+        from core.extensions import db as _db
+        from core.models import Portfolio
+        data = request.get_json() or {}
+        name = data.get('name', '').strip()
+        if not name:
+            return jsonify({"error": "Naziv je obavezan"}), 400
+        p = Portfolio(name=name, threshold_pct=float(data.get('threshold_pct', 5.0)))
+        _db.session.add(p)
+        _db.session.commit()
+        return jsonify({"id": p.id, "name": p.name, "threshold_pct": p.threshold_pct})
+
+    @app.route("/api/portfolio/<int:pid>", methods=["DELETE"])
+    @login_required
+    def portfolio_delete(pid):
+        from core.extensions import db as _db
+        from core.models import Portfolio
+        p = Portfolio.query.get(pid)
+        if not p:
+            return jsonify({"error": "Nije pronađen"}), 404
+        _db.session.delete(p)
+        _db.session.commit()
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/portfolio/<int:pid>/threshold", methods=["POST"])
+    @login_required
+    def portfolio_threshold(pid):
+        from core.extensions import db as _db
+        from core.models import Portfolio
+        p = Portfolio.query.get(pid)
+        if not p:
+            return jsonify({"error": "Nije pronađen"}), 404
+        data = request.get_json() or {}
+        p.threshold_pct = float(data.get('threshold_pct', 5.0))
+        _db.session.commit()
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/portfolio/<int:pid>/holdings")
+    @login_required
+    def portfolio_holdings(pid):
+        from core.models import Portfolio
+        p = Portfolio.query.get(pid)
+        if not p:
+            return jsonify({"error": "Nije pronađen"}), 404
+        return jsonify([{
+            "id": h.id, "symbol": h.symbol, "name": h.name,
+            "amount": h.amount, "target_pct": h.target_pct,
+            "include_rebalancing": h.include_rebalancing
+        } for h in p.holdings])
+
+    @app.route("/api/portfolio/<int:pid>/holding", methods=["POST"])
+    @login_required
+    def portfolio_add_holding(pid):
+        from core.extensions import db as _db
+        from core.models import Portfolio, PortfolioHolding
+        p = Portfolio.query.get(pid)
+        if not p:
+            return jsonify({"error": "Nije pronađen"}), 404
+        data = request.get_json() or {}
+        symbol = data.get('symbol', '').upper().strip()
+        if not symbol:
+            return jsonify({"error": "Symbol je obavezan"}), 400
+        existing = PortfolioHolding.query.filter_by(portfolio_id=pid, symbol=symbol).first()
+        if existing:
+            existing.amount = float(data.get('amount', existing.amount))
+            existing.target_pct = float(data.get('target_pct', existing.target_pct))
+        else:
+            h = PortfolioHolding(
+                portfolio_id=pid, symbol=symbol,
+                name=data.get('name', symbol),
+                amount=float(data.get('amount', 0)),
+                target_pct=float(data.get('target_pct', 0)),
+            )
+            _db.session.add(h)
+        _db.session.commit()
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/portfolio/holding/<int:hid>", methods=["DELETE"])
+    @login_required
+    def portfolio_delete_holding(hid):
+        from core.extensions import db as _db
+        from core.models import PortfolioHolding
+        h = PortfolioHolding.query.get(hid)
+        if not h:
+            return jsonify({"error": "Nije pronađen"}), 404
+        _db.session.delete(h)
+        _db.session.commit()
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/portfolio/holding/<int:hid>/toggle", methods=["POST"])
+    @login_required
+    def portfolio_toggle_rebalancing(hid):
+        from core.extensions import db as _db
+        from core.models import PortfolioHolding
+        h = PortfolioHolding.query.get(hid)
+        if not h:
+            return jsonify({"error": "Nije pronađen"}), 404
+        h.include_rebalancing = not h.include_rebalancing
+        _db.session.commit()
+        return jsonify({"status": "ok", "include_rebalancing": h.include_rebalancing})
+
+    @app.route("/api/portfolio/holding/<int:hid>/target", methods=["POST"])
+    @login_required
+    def portfolio_set_target(hid):
+        from core.extensions import db as _db
+        from core.models import PortfolioHolding
+        h = PortfolioHolding.query.get(hid)
+        if not h:
+            return jsonify({"error": "Nije pronađen"}), 404
+        data = request.get_json() or {}
+        h.target_pct = float(data.get('target_pct', h.target_pct))
+        _db.session.commit()
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/portfolio/<int:pid>/upload_csv", methods=["POST"])
+    @login_required
+    def portfolio_upload_csv(pid):
+        from core.extensions import db as _db
+        from core.models import Portfolio, PortfolioHolding
+        import csv, io
+        p = Portfolio.query.get(pid)
+        if not p:
+            return jsonify({"error": "Nije pronađen"}), 404
+        f = request.files.get('file')
+        if not f:
+            return jsonify({"error": "Fajl nije poslan"}), 400
+        content = f.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(content))
+        headers = [h.lower().strip() for h in (reader.fieldnames or [])]
+
+        def find_col(candidates):
+            for c in candidates:
+                for h in (reader.fieldnames or []):
+                    if c in h.lower():
+                        return h
+            return None
+
+        sym_col    = find_col(['symbol', 'ticker'])
+        name_col   = find_col(['name', 'cryptocurrency', 'coin'])
+        amount_col = find_col(['amount', 'holdings', 'quantity', 'balance'])
+
+        if not sym_col or not amount_col:
+            return jsonify({"error": f"Ne mogu pronaći stupce u CSV-u. Pronađeni: {reader.fieldnames}"}), 400
+
+        added = 0
+        for row in reader:
+            symbol = row.get(sym_col, '').upper().strip()
+            try:
+                amount = float(str(row.get(amount_col, '0')).replace(',', '').strip())
+            except ValueError:
+                continue
+            if not symbol or amount <= 0:
+                continue
+            name = row.get(name_col, symbol) if name_col else symbol
+            existing = PortfolioHolding.query.filter_by(portfolio_id=pid, symbol=symbol).first()
+            if existing:
+                existing.amount = amount
+                existing.name = name
+            else:
+                _db.session.add(PortfolioHolding(
+                    portfolio_id=pid, symbol=symbol, name=name, amount=amount
+                ))
+            added += 1
+        _db.session.commit()
+        return jsonify({"status": "ok", "added": added})
+
+    @app.route("/api/global_targets")
+    @login_required
+    def global_targets_list():
+        from core.models import GlobalTarget
+        targets = GlobalTarget.query.all()
+        return jsonify({t.symbol: {"target_pct": t.target_pct, "include_rebalancing": t.include_rebalancing} for t in targets})
+
+    @app.route("/api/global_targets/<symbol>/target", methods=["POST"])
+    @login_required
+    def global_target_set(symbol):
+        from core.extensions import db as _db
+        from core.models import GlobalTarget
+        symbol = symbol.upper()
+        t = GlobalTarget.query.filter_by(symbol=symbol).first()
+        if not t:
+            t = GlobalTarget(symbol=symbol)
+            _db.session.add(t)
+        data = request.get_json() or {}
+        t.target_pct = float(data.get('target_pct', t.target_pct))
+        _db.session.commit()
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/global_targets/<symbol>/toggle", methods=["POST"])
+    @login_required
+    def global_target_toggle(symbol):
+        from core.extensions import db as _db
+        from core.models import GlobalTarget
+        symbol = symbol.upper()
+        t = GlobalTarget.query.filter_by(symbol=symbol).first()
+        if not t:
+            t = GlobalTarget(symbol=symbol, include_rebalancing=False)
+            _db.session.add(t)
+        else:
+            t.include_rebalancing = not t.include_rebalancing
+        _db.session.commit()
+        return jsonify({"status": "ok", "include_rebalancing": t.include_rebalancing})
+
+    @app.route("/api/portfolio/<int:pid>/holding/<int:hid>/amount", methods=["POST"])
+    @login_required
+    def portfolio_update_amount(pid, hid):
+        from core.extensions import db as _db
+        from core.models import PortfolioHolding
+        h = PortfolioHolding.query.filter_by(id=hid, portfolio_id=pid).first()
+        if not h:
+            return jsonify({"error": "Nije pronađen"}), 404
+        data = request.get_json() or {}
+        h.amount = float(data.get('amount', h.amount))
+        _db.session.commit()
+        return jsonify({"status": "ok", "amount": h.amount})
+
+    @app.route("/api/portfolio/prices")
+    @login_required
+    def portfolio_prices():
+        import json, os, requests as req
+        key_file = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'api_keys.json'))
+        try:
+            with open(key_file) as f:
+                keys = json.load(f)
+        except Exception:
+            keys = {}
+        api_key = keys.get('coinmarketcap', {}).get('api_key', '')
+        if not api_key:
+            return jsonify({"error": "CMC API ključ nije postavljen"}), 400
+        symbols = request.args.get('symbols', '')
+        if not symbols:
+            return jsonify({})
+        try:
+            r = req.get(
+                'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest',
+                headers={'X-CMC_PRO_API_KEY': api_key, 'Accept': 'application/json'},
+                params={'symbol': symbols, 'convert': 'USD'},
+                timeout=10
+            )
+            data = r.json()
+            if 'data' not in data:
+                return jsonify({"error": data.get('status', {}).get('error_message', 'CMC greška')}), 400
+            prices = {}
+            for sym, info in data['data'].items():
+                if isinstance(info, list):
+                    info = info[0]
+                prices[sym] = info['quote']['USD']['price']
+            return jsonify(prices)
+        except Exception as e:
+            logger.error(f"portfolio_prices error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
     @app.route("/toggle_theme", methods=["POST"])
     def toggle_theme_route():
         current = session.get("theme", "dark")
