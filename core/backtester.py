@@ -294,16 +294,10 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
                 'annualized_roi': ann,
             })
 
-    # Sort by total P&L (realized + unrealized)
-    results.sort(key=lambda x: x['total_pnl'], reverse=True)
-    top = results[:top_n]
+    # Top 5 po ukupnom P&L (realized + unrealized)
+    top_by_pnl = sorted(results, key=lambda x: x['total_pnl'], reverse=True)[:top_n]
 
-    for i, combo in enumerate(top, 1):
-        print(
-            f"  #{i}: Buy {combo['buy_pct']}% / Sell {combo['sell_pct']}% "
-            f"-> Total P&L {combo['total_pnl']:+.4f} "
-            f"(realized {combo['net_profit']:+.4f}, unrealized {combo['unrealized_pnl']:+.4f}) "
-            f"| {combo['trade_count']} trades | {combo['open_positions']} open lots"
-        )
+    # Top 5 po realiziranom profitu (bez unrealized — stabilan bez obzira na tržišni smjer)
+    top_by_realized = sorted(results, key=lambda x: x['net_profit'], reverse=True)[:top_n]
 
-    return top
+    return {'top_by_pnl': top_by_pnl, 'top_by_realized': top_by_realized}

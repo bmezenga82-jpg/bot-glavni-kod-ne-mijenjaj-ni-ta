@@ -65,11 +65,12 @@ def optimize():
         'total_capital': total_capital,
         'timeframe': timeframe,
     }
-    top_combos = optimize_strategy(pair, buy_range, sell_range, start_date, end_date, top_n=5, normalize_amount=normalize_amount)
-    if not top_combos:
+    opt = optimize_strategy(pair, buy_range, sell_range, start_date, end_date, top_n=5, normalize_amount=normalize_amount)
+    if not opt or not opt.get('top_by_pnl'):
         return jsonify({'error': 'Could not fetch data or no results'}), 500
     return jsonify({
-        'top_combos': top_combos,
+        'top_combos': opt['top_by_pnl'],
+        'top_by_realized': opt['top_by_realized'],
         'meta': {
             'symbol': symbol,
             'exchange': exchange,

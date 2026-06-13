@@ -269,22 +269,34 @@ export function runOptimize() {
                 text += `Per-trade: ${m.amount} USDC (fiksno)  |  Kapital: ${m.total_capital} USDC\n`;
             }
         }
-        text += '\n';
-        data.top_combos.forEach((c, i) => {
-            const sign = c.total_pnl >= 0 ? '+' : '';
+        const fmtCombo = (c, i, sortLabel) => {
             const amtStr = c.amount != null ? ` [iznos: ${c.amount} USDC]` : '';
-            text += `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%${amtStr}\n`;
-            text += `     Ukupni P&L:      ${sign}${c.total_pnl.toFixed(4)} USDC (${c.roi_pct.toFixed(2)}% ROI)\n`;
+            let s = `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%${amtStr}\n`;
+            s += `     Realizirano:     ${c.net_profit >= 0 ? '+' : ''}${c.net_profit.toFixed(4)} USDC\n`;
+            s += `     Nerealizirano:   ${c.unrealized_pnl >= 0 ? '+' : ''}${c.unrealized_pnl.toFixed(4)} USDC\n`;
+            s += `     Ukupni P&L:      ${c.total_pnl >= 0 ? '+' : ''}${c.total_pnl.toFixed(4)} USDC (${c.roi_pct.toFixed(2)}% ROI)\n`;
             if (c.annualized_roi != null)
-                text += `     Godišnji ROI:    ${c.annualized_roi >= 0 ? '+' : ''}${c.annualized_roi.toFixed(2)}% / god\n`;
-            text += `     Realizirano:     ${c.net_profit >= 0 ? '+' : ''}${c.net_profit.toFixed(4)} USDC\n`;
-            text += `     Nerealizirano:   ${c.unrealized_pnl >= 0 ? '+' : ''}${c.unrealized_pnl.toFixed(4)} USDC\n`;
-            text += `     Trades: ${c.trade_count}   |   Otvorenih pozicija: ${c.open_positions}\n`;
-            text += '\n';
-        });
+                s += `     Godišnji ROI:    ${c.annualized_roi >= 0 ? '+' : ''}${c.annualized_roi.toFixed(2)}% / god\n`;
+            s += `     Trades: ${c.trade_count}   |   Otvorenih pozicija: ${c.open_positions}\n`;
+            return s;
+        };
+
+        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        text += '  TOP 5 po UKUPNOM P&L (realized + unrealized)\n';
+        text += '  ⚠ Varira s tržištem — u bull marketu izgleda bolje\n';
+        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+        data.top_combos.forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
+
+        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        text += '  TOP 5 po REALIZIRANOM PROFITU (samo zatvoreni ciklusi)\n';
+        text += '  ✓ Stabilan pokazatelj — ne ovisi o smjeru tržišta\n';
+        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+        (data.top_by_realized || []).forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
+
         text += '═══════════════════════════════════════════════════\n';
-        text += 'Savjet: odaberi kombinaciju s najboljim ukupnim P&L\n';
-        text += 'ali pazi na broj otvorenih pozicija (potencijalni gubitak u bear marketu).\n';
+        text += 'Savjet: za stabilan prihod gledaj TOP 5 po realiziranom.\n';
+        text += 'Ukupni P&L je koristan za bull market procjenu, ali\n';
+        text += 'pazi na broj otvorenih pozicija (rizik u bear marketu).\n';
         resultsEl.textContent = text;
     })
     .catch(error => {
