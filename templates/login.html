@@ -22,7 +22,10 @@
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="var i=document.getElementById('password');var ic=this.querySelector('i');if(i.type==='password'){i.type='text';ic.classList.replace('bi-eye','bi-eye-slash')}else{i.type='password';ic.classList.replace('bi-eye-slash','bi-eye')}"><i class="bi bi-eye"></i></button>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Login</button>
                 </form>

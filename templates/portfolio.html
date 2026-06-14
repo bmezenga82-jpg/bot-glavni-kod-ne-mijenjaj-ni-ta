@@ -14,8 +14,11 @@
     <div class="card shadow-sm mb-3 bg-dark">
         <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-3">
             <span class="text-white fw-bold small">CoinMarketCap API ključ:</span>
-            <input type="password" id="cmc-api-key-input" class="form-control form-control-sm"
-                   placeholder="Unesi CMC API ključ..." style="max-width:340px;">
+            <div class="input-group" style="max-width:380px;">
+                <input type="password" id="cmc-api-key-input" class="form-control form-control-sm"
+                       placeholder="Unesi CMC API ključ...">
+                <button class="btn btn-sm btn-outline-light" type="button" onclick="var i=document.getElementById('cmc-api-key-input');var ic=this.querySelector('i');if(i.type==='password'){i.type='text';ic.classList.replace('bi-eye','bi-eye-slash')}else{i.type='password';ic.classList.replace('bi-eye-slash','bi-eye')}"><i class="bi bi-eye"></i></button>
+            </div>
             <button class="btn btn-sm btn-outline-light" id="cmc-save-btn">Spremi</button>
             <span id="cmc-save-msg" class="small" style="display:none;"></span>
             <a href="https://coinmarketcap.com/api/" target="_blank" class="small text-info ms-auto">Registriraj se za besplatan CMC API ključ</a>

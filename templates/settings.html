@@ -456,7 +456,10 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Gmail App Password</label>
-                        <input type="password" class="form-control" id="email-app-password" placeholder="xxxx xxxx xxxx xxxx">
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="email-app-password" placeholder="xxxx xxxx xxxx xxxx">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('email-app-password', this)"><i class="bi bi-eye"></i></button>
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Email za primanje (tvoj)</label>
@@ -485,11 +488,17 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="current_password" class="form-label">Current Password</label>
-                            <input type="password" name="current_password" id="current_password" class="form-control" required>
+                            <div class="input-group">
+                                <input type="password" name="current_password" id="current_password" class="form-control" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('current_password', this)"><i class="bi bi-eye"></i></button>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label for="new_password" class="form-label">New Password</label>
-                            <input type="password" name="new_password" id="new_password" class="form-control" required>
+                            <div class="input-group">
+                                <input type="password" name="new_password" id="new_password" class="form-control" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility('new_password', this)"><i class="bi bi-eye"></i></button>
+                            </div>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Change Password</button>
