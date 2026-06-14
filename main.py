@@ -226,8 +226,9 @@ def trade_loop(
                         logger.info(f"Canceled buy order after sell.")
 
                     if sell_orders:
-                        # More sells remain -> place next buy 1% below this sell price
-                        new_buy_price = price * (1 - buy_pct / 100)
+                        # More sells remain -> place next buy sell_pct% below this sell price
+                        # (avoids echo/duplicate sells near existing open orders)
+                        new_buy_price = price * (1 - sell_pct / 100)
                         new_buy_qty = usdc_amount / new_buy_price
                         new_buy_order = exchange.place_limit_order(symbol, 'buy', new_buy_price, new_buy_qty)
                         if new_buy_order and 'order_id' in new_buy_order:

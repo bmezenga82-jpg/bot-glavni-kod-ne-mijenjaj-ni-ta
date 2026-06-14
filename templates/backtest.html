@@ -114,6 +114,13 @@
                     <label class="form-check-label" style="font-size:0.87rem;">Prikaži trade log</label>
                 </div>
             </div>
+            <div class="mb-2">
+                <label for="optimize_by" class="form-label mb-1">Optimiziraj po</label>
+                <select class="form-control form-control-sm" id="optimize_by" name="optimize_by">
+                    <option value="realized">Realizirani profit (preporučeno)</option>
+                    <option value="total">Ukupni P&L (realized + unrealized)</option>
+                </select>
+            </div>
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-primary btn-sm flex-fill" onclick="runBacktest()">Run Backtest</button>
                 <button type="button" class="btn btn-secondary btn-sm flex-fill" onclick="runOptimize()">Optimize</button>
@@ -131,7 +138,7 @@
         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('backtest-results').textContent='Results will appear here...'">Clear</button>
     </div>
     <div class="card-body p-2 flex-grow-1" style="min-height:0; overflow:hidden;">
-        <pre id="backtest-results" style="height:100%; overflow-y:auto; margin:0; font-size:0.82rem; white-space:pre-wrap; word-wrap:break-word; line-height:1.5;">Results will appear here...</pre>
+        <pre id="backtest-results" style="height:100%; overflow-y:auto; margin:0; font-size:0.82rem; white-space:pre-wrap; word-wrap:break-word; line-height:1.5; background:transparent; color:inherit;">Results will appear here...</pre>
     </div>
 </div>
 </div>

@@ -322,6 +322,14 @@ label.form-label {
     padding: 4px 8px;
 }
 
+/* text-muted fix: Bootstrap override gubi boju u našoj temi */
+html.dark .text-muted {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+html.light .text-muted {
+    color: rgba(0, 0, 0, 0.5) !important;
+}
+
 /* Sticky table headers */
 .scroll-area table thead th {
     position: sticky;

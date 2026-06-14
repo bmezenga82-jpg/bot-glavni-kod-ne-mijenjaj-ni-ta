@@ -255,8 +255,18 @@ export function runOptimize() {
             resultsEl.textContent = 'Nema rezultata.';
             return;
         }
+        const optimizeBy = document.getElementById('optimize_by')?.value || 'realized';
         const m = data.meta || {};
-        let text = '═══ TOP 5 KOMBINACIJA (sortirano po ukupnom P&L) ═══\n';
+        const primaryList  = optimizeBy === 'realized' ? (data.top_by_realized || []) : data.top_combos;
+        const secondaryList = optimizeBy === 'realized' ? data.top_combos : (data.top_by_realized || []);
+        const primaryLabel   = optimizeBy === 'realized'
+            ? 'TOP 5 po REALIZIRANOM PROFITU (samo zatvoreni ciklusi)\n  ✓ Stabilan — ne ovisi o smjeru tržišta'
+            : 'TOP 5 po UKUPNOM P&L (realized + unrealized)\n  ⚠ Varira s tržištem — u bull marketu izgleda bolje';
+        const secondaryLabel = optimizeBy === 'realized'
+            ? 'TOP 5 po UKUPNOM P&L (realized + unrealized)\n  ⚠ Varira s tržištem — informativno'
+            : 'TOP 5 po REALIZIRANOM PROFITU (samo zatvoreni ciklusi)\n  ✓ Stabilan pokazatelj — informativno';
+
+        let text = `═══ TOP 5 KOMBINACIJA ═══\n`;
         if (m.symbol) {
             text += `Valuta:    ${m.symbol} na ${m.exchange}\n`;
             const sd = m.start_date || '2023-01-01 (default)';
@@ -269,7 +279,7 @@ export function runOptimize() {
                 text += `Per-trade: ${m.amount} USDC (fiksno)  |  Kapital: ${m.total_capital} USDC\n`;
             }
         }
-        const fmtCombo = (c, i, sortLabel) => {
+        const fmtCombo = (c, i) => {
             const amtStr = c.amount != null ? ` [iznos: ${c.amount} USDC]` : '';
             let s = `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%${amtStr}\n`;
             s += `     Realizirano:     ${c.net_profit >= 0 ? '+' : ''}${c.net_profit.toFixed(4)} USDC\n`;
@@ -282,21 +292,16 @@ export function runOptimize() {
         };
 
         text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-        text += '  TOP 5 po UKUPNOM P&L (realized + unrealized)\n';
-        text += '  ⚠ Varira s tržištem — u bull marketu izgleda bolje\n';
+        text += `  ${primaryLabel}\n`;
         text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-        data.top_combos.forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
+        primaryList.forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
 
         text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-        text += '  TOP 5 po REALIZIRANOM PROFITU (samo zatvoreni ciklusi)\n';
-        text += '  ✓ Stabilan pokazatelj — ne ovisi o smjeru tržišta\n';
+        text += `  ${secondaryLabel}\n`;
         text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-        (data.top_by_realized || []).forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
+        secondaryList.forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
 
         text += '═══════════════════════════════════════════════════\n';
-        text += 'Savjet: za stabilan prihod gledaj TOP 5 po realiziranom.\n';
-        text += 'Ukupni P&L je koristan za bull market procjenu, ali\n';
-        text += 'pazi na broj otvorenih pozicija (rizik u bear marketu).\n';
         resultsEl.textContent = text;
     })
     .catch(error => {

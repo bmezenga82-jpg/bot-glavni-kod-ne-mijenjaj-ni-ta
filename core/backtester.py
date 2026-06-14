@@ -294,6 +294,10 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
                 'annualized_roi': ann,
             })
 
+    # Filtar: max pozicija = total_capital / base_amount + 10% tolerancija
+    max_allowed_positions = int(total_capital / base_amount * 1.10)
+    results = [r for r in results if r['open_positions'] <= max_allowed_positions]
+
     # Top 5 po ukupnom P&L (realized + unrealized)
     top_by_pnl = sorted(results, key=lambda x: x['total_pnl'], reverse=True)[:top_n]
 
