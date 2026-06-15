@@ -128,10 +128,14 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
     last_close = ohlcv[-1][4] if ohlcv else 0.0
     unrealized_pnl = 0.0
     total_invested_open = 0.0
+    total_qty_open = 0.0
     for s in sell_orders:
         current_value = s['qty'] * last_close * (1 - fee_rate)
         unrealized_pnl += current_value - s['cost']
         total_invested_open += s['cost']
+        total_qty_open += s['qty']
+    avg_buy_price = round(total_invested_open / total_qty_open, 6) if total_qty_open > 0 else 0.0
+    breakeven_pct = round((avg_buy_price / last_close - 1) * 100, 2) if (last_close > 0 and avg_buy_price > 0) else 0.0
 
     crypto_value_usdc = round(crypto_profit_qty * last_close * (1 - fee_rate), 4) if profit_mode == 'crypto' else 0.0
 
@@ -148,6 +152,9 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
         'total_roi_pct': total_roi_pct,
         'open_positions': len(sell_orders),
         'total_invested_open': round(total_invested_open, 4),
+        'total_qty_open': round(total_qty_open, 8),
+        'avg_buy_price': avg_buy_price,
+        'breakeven_pct': breakeven_pct,
         'last_price': round(last_close, 6),
         'trade_count': trade_count,
         'total_capital': starting_capital,

@@ -37,7 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-from core.models import ProfitLog  # Added for P&L calculation
+from core.models import ProfitLog, BacktestResult  # Added for P&L calculation
 from sqlalchemy import func  # Added for P&L calculation
 from datetime import datetime, timedelta
 
@@ -211,6 +211,65 @@ def register_routes(app):
     @login_required
     def optimize_route():
         return optimize()
+
+    @app.route("/api/backtest/saved", methods=["GET"])
+    @login_required
+    def get_saved_backtests():
+        from core.extensions import db as _db
+        tests = BacktestResult.query.order_by(BacktestResult.created_at.desc()).all()
+        return jsonify([{
+            'id': t.id, 'name': t.name,
+            'created_at': t.created_at.strftime('%Y-%m-%d %H:%M'),
+            'symbol': t.symbol, 'exchange': t.exchange,
+            'buy_pct': t.buy_pct, 'sell_pct': t.sell_pct,
+            'amount': t.amount, 'total_capital': t.total_capital,
+            'timeframe': t.timeframe, 'start_date': t.start_date, 'end_date': t.end_date,
+            'profit_mode': t.profit_mode, 'net_profit': t.net_profit,
+            'total_pnl': t.total_pnl, 'roi_pct': t.roi_pct,
+            'annualized_roi': t.annualized_roi, 'trade_count': t.trade_count,
+            'open_positions': t.open_positions, 'period_days': t.period_days,
+        } for t in tests])
+
+    @app.route("/api/backtest/save", methods=["POST"])
+    @login_required
+    def save_backtest():
+        from core.extensions import db as _db
+        data = request.get_json()
+        t = BacktestResult(
+            name=data.get('name', 'Test'),
+            symbol=data['symbol'], exchange=data['exchange'],
+            buy_pct=data['buy_pct'], sell_pct=data['sell_pct'],
+            amount=data['amount'], total_capital=data['total_capital'],
+            timeframe=data.get('timeframe', '1h'),
+            start_date=data.get('start_date'), end_date=data.get('end_date'),
+            profit_mode=data.get('profit_mode', 'usdc'),
+            net_profit=data.get('net_profit'), total_pnl=data.get('total_pnl'),
+            roi_pct=data.get('roi_pct'), annualized_roi=data.get('annualized_roi'),
+            trade_count=data.get('trade_count'), open_positions=data.get('open_positions'),
+            period_days=data.get('period_days'),
+        )
+        _db.session.add(t)
+        _db.session.commit()
+        return jsonify({'id': t.id})
+
+    @app.route("/api/backtest/saved/<int:test_id>", methods=["PATCH"])
+    @login_required
+    def rename_backtest(test_id):
+        from core.extensions import db as _db
+        t = BacktestResult.query.get_or_404(test_id)
+        data = request.get_json()
+        t.name = data.get('name', t.name)
+        _db.session.commit()
+        return jsonify({'ok': True})
+
+    @app.route("/api/backtest/saved/<int:test_id>", methods=["DELETE"])
+    @login_required
+    def delete_backtest(test_id):
+        from core.extensions import db as _db
+        t = BacktestResult.query.get_or_404(test_id)
+        _db.session.delete(t)
+        _db.session.commit()
+        return jsonify({'ok': True})
 
     @app.route("/settings", methods=["GET", "POST"])
     @login_required

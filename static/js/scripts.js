@@ -122,6 +122,14 @@ async function initializeApp() {
         // Expose for inline HTML usage
         window.runBacktest = settingsModule.runBacktest;
         window.runOptimize = settingsModule.runOptimize;
+        window.saveBacktest = settingsModule.saveBacktest;
+        window.loadSavedTests = settingsModule.loadSavedTests;
+        window.deleteTest = settingsModule.deleteTest;
+        window.renameTest = settingsModule.renameTest;
+        window.compareSelected = settingsModule.compareSelected;
+
+        // Učitaj sačuvane testove pri otvaranju stranice
+        settingsModule.loadSavedTests();
     }
 }
 

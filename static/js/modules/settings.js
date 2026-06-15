@@ -80,6 +80,8 @@ export function setupPairSelector(selected) {
     }
 }
 
+let _lastBacktestMeta = null; // pamtimo parametre za save
+
 export function runBacktest() {
     const form = document.getElementById('backtest-form');
     const showLog = document.getElementById('show_trade_log')?.checked;
@@ -97,6 +99,20 @@ export function runBacktest() {
     formData.set('compare_symbols', compareSymbols);
 
     resultsEl.textContent = 'Učitavanje...';
+
+    // Pamtimo meta za save
+    _lastBacktestMeta = {
+        symbol: formData.get('symbol'),
+        exchange: formData.get('exchange'),
+        buy_pct: parseFloat(formData.get('buy_percentage')),
+        sell_pct: parseFloat(formData.get('sell_percentage')),
+        amount: parseFloat(formData.get('amount')),
+        total_capital: parseFloat(formData.get('total_capital')),
+        timeframe: formData.get('timeframe'),
+        start_date: formData.get('start_date'),
+        end_date: formData.get('end_date'),
+        profit_mode: formData.get('profit_mode'),
+    };
 
     fetch('/backtest', { method: 'POST', body: formData })
     .then(response => response.json())
@@ -147,9 +163,18 @@ export function runBacktest() {
             if (result.open_positions != null) {
                 resultText += `Open lots:           ${result.open_positions}\n`;
                 resultText += `Capital in open:     ${(result.total_invested_open ?? 0).toFixed(2)} USDC\n`;
+                if (result.avg_buy_price > 0) {
+                    resultText += `Avg. buy price:      ${result.avg_buy_price.toFixed(4)} USDC\n`;
+                    resultText += `Current price:       ${(result.last_price ?? 0).toFixed(4)} USDC\n`;
+                    const bePct = result.breakeven_pct ?? 0;
+                    if (bePct > 0)
+                        resultText += `Break-even:          potreban rast +${bePct.toFixed(1)}%\n`;
+                    else
+                        resultText += `Break-even:          već pokriven ✓ (${Math.abs(bePct).toFixed(1)}% iznad avg)\n`;
+                }
                 const unreal = result.unrealized_pnl ?? 0;
                 resultText += `Unrealized P&L:      ${unreal.toFixed(4)} USDC`;
-                resultText += unreal >= 0 ? ' ✓\n' : ' ⚠ (pozicije ispod kupovne cijene)\n';
+                resultText += unreal >= 0 ? ' ✓\n' : ' ⚠\n';
             }
             if (result.profit_mode === 'crypto') {
                 resultText += `\n── Crypto Profit ───────────────────────\n`;
@@ -219,10 +244,121 @@ export function runBacktest() {
         }
 
         resultsEl.textContent = resultText;
+
+        // Pokaži sekciju za spremi (za prvi par u rezultatima)
+        const firstResult = Object.values(data.results)[0];
+        if (firstResult && _lastBacktestMeta) {
+            _lastBacktestMeta.net_profit = firstResult.net_profit;
+            _lastBacktestMeta.total_pnl = firstResult.total_pnl;
+            _lastBacktestMeta.roi_pct = firstResult.roi_pct;
+            _lastBacktestMeta.annualized_roi = firstResult.annualized_roi;
+            _lastBacktestMeta.trade_count = firstResult.trade_count;
+            _lastBacktestMeta.open_positions = firstResult.open_positions;
+            _lastBacktestMeta.period_days = firstResult.period_days;
+        }
+        document.getElementById('save-test-section')?.classList.remove('d-none');
     })
     .catch(error => {
         resultsEl.textContent = 'Error running backtest: ' + error;
     });
+}
+
+export function saveBacktest() {
+    if (!_lastBacktestMeta) return;
+    const nameEl = document.getElementById('save-test-name');
+    const msgEl = document.getElementById('save-test-msg');
+    const name = nameEl?.value.trim() || `${_lastBacktestMeta.symbol} ${_lastBacktestMeta.buy_pct}/${_lastBacktestMeta.sell_pct}%`;
+
+    fetch('/api/backtest/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ..._lastBacktestMeta, name }),
+    })
+    .then(r => r.json())
+    .then(() => {
+        if (msgEl) { msgEl.textContent = '✓ Sačuvano'; msgEl.className = 'mt-1 text-success small'; msgEl.classList.remove('d-none'); }
+        if (nameEl) nameEl.value = '';
+        loadSavedTests();
+        setTimeout(() => msgEl?.classList.add('d-none'), 2000);
+    })
+    .catch(() => {
+        if (msgEl) { msgEl.textContent = 'Greška pri snimanju'; msgEl.className = 'mt-1 text-danger small'; msgEl.classList.remove('d-none'); }
+    });
+}
+
+export function loadSavedTests() {
+    fetch('/api/backtest/saved')
+    .then(r => r.json())
+    .then(tests => {
+        window._savedTestsData = tests;
+        const body = document.getElementById('saved-tests-body');
+        if (!body) return;
+        if (!tests.length) {
+            body.innerHTML = '<div class="text-muted small text-center py-2">Nema sačuvanih testova.</div>';
+            return;
+        }
+        body.innerHTML = tests.map(t => `
+            <div class="d-flex align-items-center gap-2 py-1 border-bottom" style="font-size:0.8rem;">
+                <input type="checkbox" class="saved-test-cb" value="${t.id}" style="flex-shrink:0;">
+                <span class="flex-grow-1 text-truncate" title="${t.name}">
+                    <strong>${t.name}</strong>
+                    <span class="text-muted ms-1">${t.symbol} ${t.buy_pct}/${t.sell_pct}% ${t.start_date||''}→${t.end_date||''}</span>
+                </span>
+                <span class="${(t.net_profit ?? 0) >= 0 ? 'text-success' : 'text-danger'}" style="white-space:nowrap;">
+                    ${(t.net_profit ?? 0) >= 0 ? '+' : ''}${(t.net_profit ?? 0).toFixed(2)}
+                </span>
+                <button class="btn btn-xxs btn-outline-secondary" style="padding:1px 5px;font-size:0.7rem;" onclick="renameTest(${t.id},'${t.name.replace(/'/g,'\\\'')}')" title="Preimenuj">✎</button>
+                <button class="btn btn-xxs btn-outline-danger" style="padding:1px 5px;font-size:0.7rem;" onclick="deleteTest(${t.id})" title="Obriši">✕</button>
+            </div>`).join('');
+    })
+    .catch(() => {});
+}
+
+export function deleteTest(id) {
+    if (!confirm('Obrisati ovaj test?')) return;
+    fetch(`/api/backtest/saved/${id}`, { method: 'DELETE' })
+    .then(() => loadSavedTests());
+}
+
+export function renameTest(id, currentName) {
+    const newName = prompt('Novi naziv:', currentName);
+    if (!newName || newName === currentName) return;
+    fetch(`/api/backtest/saved/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+    }).then(() => loadSavedTests());
+}
+
+export function compareSelected() {
+    const selected = [...document.querySelectorAll('.saved-test-cb:checked')].map(cb => parseInt(cb.value));
+    if (selected.length < 2) {
+        alert('Odaberi najmanje 2 testa za usporedbu.');
+        return;
+    }
+    const all = window._savedTestsData || [];
+    const tests = all.filter(t => selected.includes(t.id));
+    const resultsEl = document.getElementById('backtest-results');
+    if (!resultsEl) return;
+
+    const pad = (s, w) => String(s ?? '—').padEnd(w);
+    let text = `════ USPOREDBA SAČUVANIH TESTOVA ══════════════════════\n`;
+    text += `${pad('Naziv', 22)} ${pad('Par', 12)} ${pad('Buy/Sell', 10)} ${pad('Realizirano', 14)} ${pad('Uk. P&L', 12)} ${pad('God.ROI', 9)} Trades\n`;
+    text += `───────────────────────────────────────────────────────────────────\n`;
+
+    const sorted = [...tests].sort((a, b) => (b.net_profit ?? 0) - (a.net_profit ?? 0));
+    sorted.forEach((t, i) => {
+        const real = t.net_profit ?? 0;
+        const pnl  = t.total_pnl ?? 0;
+        const roi  = t.annualized_roi;
+        text += `${pad((i+1)+'. '+t.name, 22)} ${pad(t.symbol, 12)} ${pad(t.buy_pct+'/'+t.sell_pct+'%', 10)} `;
+        text += `${pad((real >= 0 ? '+' : '') + real.toFixed(2) + ' $', 14)} `;
+        text += `${pad((pnl  >= 0 ? '+' : '') + pnl.toFixed(2)  + ' $', 12)} `;
+        text += `${pad(roi != null ? (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%' : '—', 9)} ${t.trade_count ?? '—'}\n`;
+        text += `${pad('', 22)} ${t.start_date||'?'} → ${t.end_date||'?'}  |  kapital: ${t.total_capital} USDC  |  iznos: ${t.amount} USDC\n\n`;
+    });
+    text += `════════════════════════════════════════════════════════════════════\n`;
+    resultsEl.textContent = text;
 }
 
 export function runOptimize() {
