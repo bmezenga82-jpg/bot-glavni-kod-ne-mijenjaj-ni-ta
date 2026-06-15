@@ -140,7 +140,7 @@
                                         <button class="btn btn-xxs btn-warning edit-action-btn"
                                         id="edit-action-{{ pair['id'] }}"
                                         data-running="{{ 'true' if pair['is_running'] else 'false' }}"
-                                        onclick="openEditModal({{ pair['id'] }}, '{{ pair['symbol'] }}', {{ pair['buy_percentage'] }}, {{ pair['sell_percentage'] }}, {{ pair['amount'] }}, '{{ pair['exchange'] }}', '{{ pair['trading_mode'] }}', '{{ pair['profit_mode'] }}', {{ 'true' if pair['is_running'] else 'false' }})">
+                                        onclick="openEditModal({{ pair['id'] }}, '{{ pair['symbol'] }}', {{ pair['buy_percentage'] }}, {{ pair['sell_percentage'] }}, {{ pair['amount'] }}, '{{ pair['exchange'] }}', '{{ pair['trading_mode'] }}', '{{ pair['profit_mode'] }}', this.dataset.running === 'true')">
                                             Edit
                                         </button>
                                     </div>

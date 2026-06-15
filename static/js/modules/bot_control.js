@@ -71,14 +71,9 @@ export function updateAllBotStatuses() {
                     btn.classList.toggle('btn-success', !isRunning);
                     btn.classList.toggle('btn-danger', isRunning);
 
-                    // Also update the edit button's disabled state
                     const editBtn = document.getElementById(`edit-action-${pairId}`);
                     if (editBtn) {
-                        if (isRunning) {
-                            editBtn.classList.add("disabled");
-                        } else {
-                            editBtn.classList.remove("disabled");
-                        }
+                        editBtn.dataset.running = isRunning ? 'true' : 'false';
                     }
                 }
             }
