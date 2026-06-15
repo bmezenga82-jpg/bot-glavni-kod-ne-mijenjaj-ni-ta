@@ -63,7 +63,8 @@ class PairProfit(db.Model):
     pair_id = db.Column(db.Integer, db.ForeignKey('trading_pair.id'), nullable=False)
     exchange = db.Column(db.String(50), nullable=False, default='binance')
     trading_mode = db.Column(db.String(10), nullable=False, default='testnet')
-    profit_usdc = db.Column(db.Float, nullable=False, default=0.0)
+    profit_usdc = db.Column(db.Float, nullable=False, default=0.0)       # realized USDC profit (usdc mode only)
+    profit_usdc_equiv = db.Column(db.Float, nullable=False, default=0.0) # USDC equivalent from crypto mode trades
     profit_crypto = db.Column(db.Float, nullable=False, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

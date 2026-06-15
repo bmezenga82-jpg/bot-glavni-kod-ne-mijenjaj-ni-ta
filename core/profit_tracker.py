@@ -64,9 +64,11 @@ class ProfitTracker:
                         profit_crypto=0.0,
                     )
                     db.session.add(pair_profit)
-                pair_profit.profit_usdc = (pair_profit.profit_usdc or 0.0) + profit
                 if profit_mode == 'crypto':
+                    pair_profit.profit_usdc_equiv = (pair_profit.profit_usdc_equiv or 0.0) + profit
                     pair_profit.profit_crypto = (pair_profit.profit_crypto or 0.0) + retained_qty
+                else:
+                    pair_profit.profit_usdc = (pair_profit.profit_usdc or 0.0) + profit
                 pair_profit.updated_at = datetime.utcnow()
             db.session.commit()
         except Exception as e:  # pragma: no cover - skip if DB not configured
@@ -110,6 +112,7 @@ class ProfitTracker:
             pair_profit = PairProfit.query.filter_by(pair_id=pair_id).first()
             if pair_profit:
                 pair_profit.profit_usdc = 0.0
+                pair_profit.profit_usdc_equiv = 0.0
                 pair_profit.profit_crypto = 0.0
                 pair_profit.updated_at = datetime.utcnow()
                 db.session.commit()
@@ -131,8 +134,9 @@ class ProfitTracker:
                     {
                         "pair_id": p.pair_id,
                         "symbol": p.pair.symbol if p.pair else "",
-                        "profit_usdc": round(p.profit_usdc, 6),
-                        "profit_crypto": round(p.profit_crypto, 6),
+                        "profit_usdc": round(p.profit_usdc or 0.0, 6),
+                        "profit_usdc_equiv": round(p.profit_usdc_equiv or 0.0, 6),
+                        "profit_crypto": round(p.profit_crypto or 0.0, 6),
                         "profit_mode": p.pair.profit_mode if p.pair else "usdc",
                     }
                 )

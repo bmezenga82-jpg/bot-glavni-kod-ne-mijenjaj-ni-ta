@@ -283,14 +283,15 @@ function renderPairProfits(grouped) {
             const running = window.currentTradeStatus[p.symbol];
             if (running) anyRunning = true;
 
-            const isCrypto = p.profit_mode === 'crypto' && Number(p.profit_crypto) > 0;
             const currentPrice = window.priceCache ? (window.priceCache[p.symbol] || 0) : 0;
             const cryptoQty = Number(p.profit_crypto);
             const currentVal = cryptoQty * currentPrice;
-            const usdcEquiv = Number(p.profit_usdc);
+            const usdcRealized = Number(p.profit_usdc);
+            const usdcEquiv = Number(p.profit_usdc_equiv || 0);
+            const hasCrypto = cryptoQty > 0;
 
             let cryptoValCell = '<td class="text-end text-muted">—</td>';
-            if (isCrypto && currentPrice > 0) {
+            if (hasCrypto && currentPrice > 0) {
                 const diff = currentVal - usdcEquiv;
                 const color = diff >= 0 ? 'text-success' : 'text-danger';
                 const sign = diff >= 0 ? '+' : '';
@@ -298,18 +299,18 @@ function renderPairProfits(grouped) {
                     <span class="fw-bold ${color}">${currentVal.toFixed(2)} $</span>
                     <div style="font-size:0.7rem;" class="${color}">(${sign}${diff.toFixed(2)} $ vs USDC)</div>
                 </td>`;
-            } else if (isCrypto) {
+            } else if (hasCrypto) {
                 cryptoValCell = `<td class="text-end text-muted" style="font-size:0.75rem;">čeka cijenu...</td>`;
             }
 
-            const usdcEquivCell = isCrypto
+            const usdcEquivCell = usdcEquiv > 0
                 ? `<td class="text-end text-info">${usdcEquiv.toFixed(4)} $</td>`
                 : `<td class="text-end text-muted">—</td>`;
 
             row.innerHTML = `
                 <td>${p.symbol}</td>
-                <td id="profit-usdc-info-${p.pair_id}" class="text-end">${isCrypto ? '—' : usdcEquiv.toFixed(4)}</td>
-                <td id="profit-crypto-info-${p.pair_id}" class="text-end">${cryptoQty.toFixed(6)}</td>
+                <td id="profit-usdc-info-${p.pair_id}" class="text-end">${usdcRealized > 0 ? usdcRealized.toFixed(4) : '—'}</td>
+                <td id="profit-crypto-info-${p.pair_id}" class="text-end">${cryptoQty > 0 ? cryptoQty.toFixed(6) : '—'}</td>
                 ${usdcEquivCell}
                 ${cryptoValCell}
                 <td>
@@ -317,7 +318,7 @@ function renderPairProfits(grouped) {
                     <button class="btn btn-xxs btn-danger ms-1 remove-pair${running ? ' disabled' : ''}" style="padding:1px 4px;font-size:0.55rem;" onclick="removePairProfit(${p.pair_id})"><i class="bi bi-x-circle"></i></button>
                 </td>`;
             tbody.appendChild(row);
-            totalUsdc += usdcEquiv;
+            totalUsdc += usdcRealized;
             totalCrypto += cryptoQty;
         });
         const resetAllBtn = document.getElementById(`reset-all-${key}`);
