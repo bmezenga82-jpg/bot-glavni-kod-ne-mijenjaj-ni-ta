@@ -307,6 +307,7 @@ export function loadSavedTests() {
                 <span class="${(t.net_profit ?? 0) >= 0 ? 'text-success' : 'text-danger'}" style="white-space:nowrap;">
                     ${(t.net_profit ?? 0) >= 0 ? '+' : ''}${(t.net_profit ?? 0).toFixed(2)}
                 </span>
+                <button class="btn btn-xxs btn-outline-primary" style="padding:1px 5px;font-size:0.7rem;" onclick="openTest(${t.id})" title="Otvori i pokreni">▶</button>
                 <button class="btn btn-xxs btn-outline-secondary" style="padding:1px 5px;font-size:0.7rem;" onclick="renameTest(${t.id},'${t.name.replace(/'/g,'\\\'')}')" title="Preimenuj">✎</button>
                 <button class="btn btn-xxs btn-outline-danger" style="padding:1px 5px;font-size:0.7rem;" onclick="deleteTest(${t.id})" title="Obriši">✕</button>
             </div>`).join('');
@@ -328,6 +329,35 @@ export function renameTest(id, currentName) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName }),
     }).then(() => loadSavedTests());
+}
+
+export function openTest(id) {
+    const all = window._savedTestsData || [];
+    const t = all.find(x => x.id === id);
+    if (!t) return;
+
+    // Popuni formu sa sačuvanim parametrima
+    const set = (sel, val) => { const el = document.getElementById(sel); if (el) el.value = val; };
+    set('symbol', t.symbol);
+    set('exchange', t.exchange);
+    set('buy_percentage', t.buy_pct);
+    set('sell_percentage', t.sell_pct);
+    set('amount', t.amount);
+    set('total_capital', t.total_capital);
+    set('timeframe', t.timeframe || '1h');
+    set('start_date', t.start_date || '');
+    set('end_date', t.end_date || '');
+    set('profit_mode', t.profit_mode || 'usdc');
+
+    // Trigger recalc kalkulatora
+    if (typeof updateCapitalCalc === 'function') updateCapitalCalc();
+
+    // Postavi naziv za save na isti naziv
+    const nameEl = document.getElementById('save-test-name');
+    if (nameEl) nameEl.value = t.name;
+
+    // Pokreni backtest
+    if (typeof window.runBacktest === 'function') window.runBacktest();
 }
 
 export function compareSelected() {

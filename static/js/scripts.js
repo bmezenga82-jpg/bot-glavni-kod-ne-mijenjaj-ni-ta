@@ -126,6 +126,7 @@ async function initializeApp() {
         window.loadSavedTests = settingsModule.loadSavedTests;
         window.deleteTest = settingsModule.deleteTest;
         window.renameTest = settingsModule.renameTest;
+        window.openTest = settingsModule.openTest;
         window.compareSelected = settingsModule.compareSelected;
 
         // Učitaj sačuvane testove pri otvaranju stranice
