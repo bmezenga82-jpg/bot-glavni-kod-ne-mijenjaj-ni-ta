@@ -121,6 +121,23 @@
                         <small class="text-muted d-block" style="font-size:0.78rem;">0.8%→80, 1%→100, 2%→200 USDC</small>
                     </label>
                 </div>
+                <hr class="my-2">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <label style="font-size:0.82rem; white-space:nowrap;">Raspon testiranja:</label>
+                    <div class="d-flex align-items-center gap-1">
+                        <span style="font-size:0.8rem;">Buy do</span>
+                        <input type="number" class="form-control form-control-sm" id="max_buy_pct" name="max_buy_pct"
+                               value="4" min="0.4" max="10" step="0.2" style="width:58px;">
+                        <span style="font-size:0.8rem;">%</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span style="font-size:0.8rem;">Sell do</span>
+                        <input type="number" class="form-control form-control-sm" id="max_sell_pct" name="max_sell_pct"
+                               value="6" min="0.4" max="15" step="0.2" style="width:58px;">
+                        <span style="font-size:0.8rem;">%</span>
+                    </div>
+                </div>
+                <small class="text-muted" id="combo-count-label" style="font-size:0.75rem;"></small>
             </div>
             <div class="mb-2">
                 <div class="form-check">
@@ -235,14 +252,27 @@ function updateOptimizeMode() {
     const coverageInput = document.getElementById('target_coverage_pct');
     if (wrap) wrap.style.display = mode === 'coverage' ? 'flex' : 'none';
     if (coverageInput) coverageInput.name = mode === 'coverage' ? 'target_coverage_pct' : '';
-    // normalize_amount checkbox — stari način
     const normCb = document.getElementById('normalize_amount');
     if (normCb) normCb.value = mode === 'normalize' ? 'on' : '';
+    updateComboCount();
+}
+
+function updateComboCount() {
+    const maxBuy  = parseFloat(document.getElementById('max_buy_pct')?.value  || 4);
+    const maxSell = parseFloat(document.getElementById('max_sell_pct')?.value || 6);
+    const step = 0.2;
+    const nBuy  = Math.floor(maxBuy  / step);
+    const nSell = Math.floor(maxSell / step);
+    const label = document.getElementById('combo-count-label');
+    if (label) label.textContent = `→ ${nBuy} × ${nSell} = ${nBuy * nSell} kombinacija`;
 }
 
 document.querySelectorAll('input[name="optimize_mode"]').forEach(r =>
     r.addEventListener('change', updateOptimizeMode)
 );
+['max_buy_pct', 'max_sell_pct'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateComboCount);
+});
 
 function updateCompareList() {
     const primary = document.getElementById('symbol').value;
@@ -259,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCapitalCalc();
     updateCompareList();
     updateOptimizeMode();
+    updateComboCount();
 });
 </script>
 {% endblock %}

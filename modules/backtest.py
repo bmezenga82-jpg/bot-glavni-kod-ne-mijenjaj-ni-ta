@@ -50,9 +50,13 @@ def optimize():
     total_capital = float(request.form.get('total_capital', amount))
     timeframe = request.form.get('timeframe', '1h')
 
-    # 0.2% steps from 0.2% to 3.0% — 225 combinations, ~10-20s for 2yr of 1h data
-    buy_range = [-round(x * 0.2, 1) for x in range(1, 16)]   # -0.2% to -3.0%
-    sell_range = [round(x * 0.2, 1) for x in range(1, 16)]   # +0.2% to +3.0%
+    # Raspon buy%/sell% — korisnik može postaviti max vrijednost
+    max_buy_pct  = max(0.4, min(float(request.form.get('max_buy_pct',  '4.0') or '4.0'), 10.0))
+    max_sell_pct = max(0.4, min(float(request.form.get('max_sell_pct', '6.0') or '6.0'), 15.0))
+    # Korak: manji korak = više kombinacija = sporije (0.2% → ~420 combos za 4%/6% raspon)
+    step = 0.2
+    buy_range  = [-round(x * step, 2) for x in range(1, int(max_buy_pct  / step) + 1)]
+    sell_range = [ round(x * step, 2) for x in range(1, int(max_sell_pct / step) + 1)]
 
     buy_percentage = abs(float(request.form.get('buy_percentage', 1.0)))
     normalize_amount = 'normalize_amount' in request.form
