@@ -80,12 +80,18 @@ def trade_loop(
         if ex_sells or ex_buys:
             for o in ex_sells:
                 implied_buy = o['price'] / (1 + sell_pct / 100)
+                # U crypto modu rekonstruiraj retained_qty: ukupna qty pri implied_buy minus sell qty
+                if profit_mode == 'crypto':
+                    estimated_total_qty = usdc_amount / implied_buy
+                    rec_retained = max(0.0, round(estimated_total_qty - o['amount'], 8))
+                else:
+                    rec_retained = 0.0
                 sell_orders.append({
                     'id': o['id'],
                     'price': o['price'],
                     'amount': o['amount'],
                     'buy_price': implied_buy,
-                    'retained_qty': 0.0,
+                    'retained_qty': rec_retained,
                 })
                 order_mgr.set_order(symbol, 'sell', o['price'], o['amount'], o['id'], exchange=settings['exchange'])
             if ex_buys:
@@ -110,12 +116,17 @@ def trade_loop(
                     if not already_covered:
                         new_sell = exchange.place_limit_order(symbol, 'sell', expected_sell, t['amount'])
                         if new_sell and 'order_id' in new_sell:
+                            if profit_mode == 'crypto':
+                                est_total = usdc_amount / t['price']
+                                dt_retained = max(0.0, round(est_total - t['amount'], 8))
+                            else:
+                                dt_retained = 0.0
                             sell_orders.append({
                                 'id': new_sell['order_id'],
                                 'price': expected_sell,
                                 'amount': t['amount'],
                                 'buy_price': t['price'],
-                                'retained_qty': 0.0,
+                                'retained_qty': dt_retained,
                             })
                             order_mgr.set_order(symbol, 'sell', expected_sell, t['amount'], new_sell['order_id'], exchange=settings['exchange'])
                             open_sell_prices.add(expected_sell)

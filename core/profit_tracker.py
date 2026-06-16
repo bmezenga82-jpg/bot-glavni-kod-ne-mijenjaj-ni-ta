@@ -65,7 +65,9 @@ class ProfitTracker:
                     )
                     db.session.add(pair_profit)
                 if profit_mode == 'crypto':
-                    pair_profit.profit_usdc_equiv = (pair_profit.profit_usdc_equiv or 0.0) + profit
+                    # USDC vrijednost zadržanih tokena u trenutku prodaje (za usporedbu s trenutnom cijenom)
+                    usdc_equiv = retained_qty * sell_price
+                    pair_profit.profit_usdc_equiv = (pair_profit.profit_usdc_equiv or 0.0) + usdc_equiv
                     pair_profit.profit_crypto = (pair_profit.profit_crypto or 0.0) + retained_qty
                 else:
                     pair_profit.profit_usdc = (pair_profit.profit_usdc or 0.0) + profit

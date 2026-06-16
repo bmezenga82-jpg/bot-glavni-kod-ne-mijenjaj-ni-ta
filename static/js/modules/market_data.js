@@ -260,7 +260,7 @@ function renderAccountInfo(accountInfo) {
             <div id="${collapseId}" class="accordion-collapse collapse${expanded.has(collapseId) ? ' show' : ''}" data-bs-parent="#account-accordion">
               <div class="accordion-body">
                 <table class="table table-sm">
-                  <thead><tr><th>Par</th><th class="text-end">Profit (USDC)</th><th class="text-end">Token Profit</th><th class="text-end" title="Što bi profit bio u USDC u trenutku prodaje">USDC ekv.</th><th class="text-end" title="Kripto qty × trenutna cijena">Kripto vrijednost</th><th></th></tr></thead>
+                  <thead><tr><th>Par</th><th class="text-end">Profit (USDC)</th><th class="text-end">Token Profit</th><th class="text-end" title="Vrijednost zadržanih tokena u trenutku kad su zarađeni (qty × cijena pri prodaji)">USDC ekv.</th><th class="text-end" title="Kripto qty × trenutna cijena (+ pozitivno = cijena rasla od zarade)">Kripto vrijednost</th><th></th></tr></thead>
                   <tbody id="${tbodyId}"></tbody>
                 </table>
               </div>
