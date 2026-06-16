@@ -330,6 +330,7 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
                 'total_pnl': r['total_pnl'],
                 'net_profit': r['net_profit'],
                 'unrealized_pnl': r['unrealized_pnl'],
+                'total_invested_open': r['total_invested_open'],
                 'trade_count': r['trade_count'],
                 'open_positions': r['open_positions'],
                 'roi_pct': r['total_roi_pct'],

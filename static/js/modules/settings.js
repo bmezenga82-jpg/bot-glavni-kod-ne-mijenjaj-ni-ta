@@ -561,7 +561,8 @@ export function runOptimize() {
             s += `     Ukupni P&L:      ${c.total_pnl >= 0 ? '+' : ''}${c.total_pnl.toFixed(4)} USDC (${c.roi_pct.toFixed(2)}% ROI)\n`;
             if (c.annualized_roi != null)
                 s += `     Godišnji ROI:    ${c.annualized_roi >= 0 ? '+' : ''}${c.annualized_roi.toFixed(2)}% / god\n`;
-            s += `     Trades: ${c.trade_count}   |   Otvorenih pozicija: ${c.open_positions}\n`;
+            const invested = c.total_invested_open != null ? c.total_invested_open.toFixed(2) : (c.open_positions * c.amount).toFixed(2);
+            s += `     Trades: ${c.trade_count}   |   Otvorenih: ${c.open_positions} pos = ${invested} USDC uloženo\n`;
             return s;
         };
 
