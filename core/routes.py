@@ -844,19 +844,29 @@ def register_routes(app):
             logger.error(f"long_term_analysis error: {e}", exc_info=True)
             return jsonify({"error": str(e)}), 500
 
-    @app.route("/api/long_term_scan", methods=["GET"])
+    @app.route("/api/long_term_scan/start", methods=["POST"])
     @login_required
-    def long_term_scan_route():
+    def long_term_scan_start():
         try:
-            from core.long_term_analysis import scan_top_coins
-            force = request.args.get('force', '') == '1'
+            import core.long_term_analysis as _lta
+            force = request.json and request.json.get('force', False)
             if force:
-                import core.long_term_analysis as _lta
                 _lta._scan_cache = {'data': None, 'ts': 0}
-            results = scan_top_coins(top_n=40)
-            return jsonify(results)
+            if not _lta._scan_status['running']:
+                import eventlet
+                eventlet.spawn(_lta.scan_top_coins_bg, 25)
+            return jsonify({'started': True})
         except Exception as e:
-            logger.error(f"long_term_scan error: {e}", exc_info=True)
+            logger.error(f"long_term_scan_start error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/long_term_scan/poll", methods=["GET"])
+    @login_required
+    def long_term_scan_poll():
+        try:
+            from core.long_term_analysis import get_scan_state
+            return jsonify(get_scan_state())
+        except Exception as e:
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/set_profit_mode", methods=["POST"])

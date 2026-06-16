@@ -214,6 +214,7 @@ function destroyCharts() {
 async function runScanner(force = false) {
     const scanBody = document.getElementById('lt-scan-body');
     const spinner = document.getElementById('lt-scan-spinner');
+    const spinnerMsg = document.getElementById('lt-scan-spinner-msg');
     const errEl = document.getElementById('lt-scan-error');
     const wrap = document.getElementById('lt-scan-wrap');
 
@@ -224,47 +225,87 @@ async function runScanner(force = false) {
     document.getElementById('lt-scan-cache-note').style.display = 'none';
 
     try {
-        const url = `/api/long_term_scan${force ? '?force=1' : ''}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error || 'Greška');
+        // Check if cache already ready (no need to start)
+        const pollCheck = await fetch('/api/long_term_scan/poll');
+        const checkState = await pollCheck.json();
 
-        spinner.style.display = 'none';
-        wrap.style.display = 'block';
-        if (!force) document.getElementById('lt-scan-cache-note').style.display = '';
+        if (checkState.ready && !force) {
+            spinner.style.display = 'none';
+            renderScanResults(checkState.data, checkState.age_min);
+            return;
+        }
 
-        scanBody.innerHTML = data.map(coin => {
-            const rsiD = coin.rsi_daily;
-            const rsiW = coin.rsi_weekly;
-            const vs200 = coin.vs_200ma;
-            const score = coin.score;
-            function rC(v) {
-                if (v < 30) return 'text-success fw-bold';
-                if (v < 45) return 'text-info';
-                if (v > 70) return 'text-danger fw-bold';
-                return '';
+        // Start scan in background
+        await fetch('/api/long_term_scan/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({force})
+        });
+
+        // Poll until done
+        let elapsed = 0;
+        while (true) {
+            await new Promise(r => setTimeout(r, 2500));
+            elapsed += 2.5;
+            if (spinnerMsg) spinnerMsg.textContent = `Skeniram top 25 coinova... ${elapsed.toFixed(0)}s`;
+
+            const pollRes = await fetch('/api/long_term_scan/poll');
+            const state = await pollRes.json();
+
+            if (state.error) throw new Error(state.error);
+            if (state.ready) {
+                spinner.style.display = 'none';
+                renderScanResults(state.data, state.age_min);
+                return;
             }
-            function sC(v) {
-                if (v >= 65) return 'text-success fw-bold';
-                if (v >= 45) return 'text-warning';
-                return 'text-danger';
-            }
-            return `<tr style="cursor:pointer;" onclick="window._ltOpenCoin('${coin.symbol}')">
-                <td><strong>${coin.symbol.replace('/USDT','')}</strong></td>
-                <td class="text-end">${coin.price}</td>
-                <td class="text-center ${rC(rsiD)}">${rsiD}</td>
-                <td class="text-center ${rsiW !== null ? rC(rsiW) : 'text-muted'}">${rsiW !== null ? rsiW : '—'}</td>
-                <td class="text-center ${vs200 < 0 ? 'text-success' : 'text-danger'}">${vs200 > 0 ? '+' : ''}${vs200}%</td>
-                <td class="text-center">${coin.ath_pct}%</td>
-                <td class="text-center ${sC(score)} fs-6">${score}</td>
-                <td>${coin.signal_hr}</td>
-            </tr>`;
-        }).join('');
+            if (elapsed > 180) throw new Error('Timeout — pokušaj ponovo');
+        }
     } catch (e) {
         spinner.style.display = 'none';
         errEl.textContent = `Greška: ${e.message}`;
         errEl.style.display = 'block';
     }
+}
+
+function renderScanResults(data, ageMins) {
+    const scanBody = document.getElementById('lt-scan-body');
+    const wrap = document.getElementById('lt-scan-wrap');
+    const cacheNote = document.getElementById('lt-scan-cache-note');
+
+    wrap.style.display = 'block';
+    if (ageMins !== null) {
+        cacheNote.textContent = `Podaci stari ${ageMins} min (osvježavaju se svaki sat)`;
+        cacheNote.style.display = '';
+    }
+
+    function rC(v) {
+        if (v < 30) return 'text-success fw-bold';
+        if (v < 45) return 'text-info';
+        if (v > 70) return 'text-danger fw-bold';
+        return '';
+    }
+    function sC(v) {
+        if (v >= 65) return 'text-success fw-bold';
+        if (v >= 45) return 'text-warning';
+        return 'text-danger';
+    }
+
+    scanBody.innerHTML = data.map(coin => {
+        const rsiD = coin.rsi_daily;
+        const rsiW = coin.rsi_weekly;
+        const vs200 = coin.vs_200ma;
+        const score = coin.score;
+        return `<tr style="cursor:pointer;" onclick="window._ltOpenCoin('${coin.symbol}')">
+            <td><strong>${coin.symbol.replace('/USDT','')}</strong></td>
+            <td class="text-end">${coin.price}</td>
+            <td class="text-center ${rC(rsiD)}">${rsiD}</td>
+            <td class="text-center ${rsiW !== null ? rC(rsiW) : 'text-muted'}">${rsiW !== null ? rsiW : '—'}</td>
+            <td class="text-center ${vs200 < 0 ? 'text-success' : 'text-danger'}">${vs200 > 0 ? '+' : ''}${vs200}%</td>
+            <td class="text-center">${coin.ath_pct}%</td>
+            <td class="text-center ${sC(score)} fs-6">${score}</td>
+            <td>${coin.signal_hr}</td>
+        </tr>`;
+    }).join('');
 }
 
 // Called from inline onclick in scanner rows

@@ -19,6 +19,7 @@ BTC_HALVINGS = [
 ]
 
 _scan_cache = {'data': None, 'ts': 0}
+_scan_status = {'running': False, 'error': None}
 CACHE_TTL = 3600  # 1 hour
 
 
@@ -448,31 +449,46 @@ def _scan_one(sym, tickers_data):
         return None
 
 
-def scan_top_coins(top_n=25):
-    """Scan top coins sequentially (safe with eventlet/gevent)."""
-    global _scan_cache
+def scan_top_coins_bg(top_n=25):
+    """Run scan in background greenlet — updates _scan_cache when done."""
+    global _scan_cache, _scan_status
+    _scan_status['running'] = True
+    _scan_status['error'] = None
+    try:
+        ex = _make_binance()
+        tickers = ex.fetch_tickers()
+        usdt = [
+            (sym, t.get('quoteVolume', 0))
+            for sym, t in tickers.items()
+            if sym.endswith('/USDT') and t.get('quoteVolume', 0) > 0
+            and sym.replace('/USDT', '') not in STABLECOINS
+        ]
+        usdt.sort(key=lambda x: x[1], reverse=True)
+        pairs = [sym for sym, _ in usdt[:top_n]]
+
+        results = []
+        for sym in pairs:
+            res = _scan_one(sym, tickers.get(sym, {}))
+            if res:
+                results.append(res)
+
+        results.sort(key=lambda x: x['score'], reverse=True)
+        _scan_cache = {'data': results, 'ts': datetime.now(timezone.utc).timestamp()}
+    except Exception as e:
+        _scan_status['error'] = str(e)
+        logger.error(f"scan_top_coins_bg greška: {e}", exc_info=True)
+    finally:
+        _scan_status['running'] = False
+
+
+def get_scan_state():
+    """Return current scan state for polling."""
     now = datetime.now(timezone.utc).timestamp()
-    if _scan_cache['data'] and (now - _scan_cache['ts']) < CACHE_TTL:
-        return _scan_cache['data']
-
-    ex = _make_binance()
-    tickers = ex.fetch_tickers()
-    usdt = [
-        (sym, t.get('quoteVolume', 0))
-        for sym, t in tickers.items()
-        if sym.endswith('/USDT') and t.get('quoteVolume', 0) > 0
-        and sym.replace('/USDT', '') not in STABLECOINS
-    ]
-    usdt.sort(key=lambda x: x[1], reverse=True)
-    pairs = [sym for sym, _ in usdt[:top_n]]
-
-    results = []
-    # Sequential to avoid eventlet threading issues
-    for sym in pairs:
-        res = _scan_one(sym, tickers.get(sym, {}))
-        if res:
-            results.append(res)
-
-    results.sort(key=lambda x: x['score'], reverse=True)
-    _scan_cache = {'data': results, 'ts': now}
-    return results
+    fresh = _scan_cache['data'] is not None and (now - _scan_cache['ts']) < CACHE_TTL
+    return {
+        'running': _scan_status['running'],
+        'error': _scan_status['error'],
+        'ready': fresh and not _scan_status['running'],
+        'data': _scan_cache['data'] if fresh else None,
+        'age_min': round((now - _scan_cache['ts']) / 60, 1) if _scan_cache['ts'] else None,
+    }
