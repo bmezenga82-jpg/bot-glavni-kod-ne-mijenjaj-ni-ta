@@ -369,8 +369,8 @@ label.form-label {
 
 /* Smaller accordion headers in compact mode */
 .dashboard-compact .accordion-button {
-    font-size: 0.75rem;
-    padding: 4px 8px;
+    font-size: 1rem;
+    padding: 6px 10px;
 }
 
 /* text-muted fix: Bootstrap override gubi boju u našoj temi */
