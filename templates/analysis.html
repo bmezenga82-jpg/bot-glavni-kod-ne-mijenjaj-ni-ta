@@ -22,6 +22,11 @@
                         Grid analiza
                     </button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link text-white" id="tab-longterm-btn" data-bs-toggle="tab" data-bs-target="#tab-longterm">
+                        📈 Dugoročna analiza
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -124,12 +129,136 @@
                 </div>
             </div>
 
+            <!-- TAB 3: Dugoročna analiza -->
+            <div class="tab-pane fade" id="tab-longterm">
+                <div class="card-body bg-dark p-3">
+                    <!-- Sub-tabs: Chart / Scanner -->
+                    <ul class="nav nav-pills mb-3 gap-2" id="lt-sub-tabs">
+                        <li class="nav-item">
+                            <button class="nav-link active btn-sm" id="lt-tab-chart-btn" data-bs-toggle="pill" data-bs-target="#lt-tab-chart">
+                                📊 Analiza coina
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link btn-sm" id="lt-tab-scan-btn" data-bs-toggle="pill" data-bs-target="#lt-tab-scan">
+                                🔍 Scanner (top 40)
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+
+                        <!-- Chart sub-tab -->
+                        <div class="tab-pane fade show active" id="lt-tab-chart">
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                                <input type="text" id="lt-symbol" class="form-control form-control-sm"
+                                    placeholder="npr. BTC/USDT" value="BTC/USDT" style="width:150px;">
+                                <select id="lt-range" class="form-select form-select-sm" style="width:140px;">
+                                    <option value="1M">1 mjesec</option>
+                                    <option value="3M">3 mjeseca</option>
+                                    <option value="6M">6 mjeseci</option>
+                                    <option value="1Y" selected>1 godina</option>
+                                    <option value="3Y">3 godine (tjed.)</option>
+                                </select>
+                                <button id="lt-run-btn" class="btn btn-primary btn-sm">Analiziraj</button>
+                            </div>
+
+                            <div id="lt-spinner" class="text-center py-4 text-muted" style="display:none;">
+                                <div class="spinner-border mb-2" role="status"></div>
+                                <div>Dohvaćam podatke i računam indikatore... (10-30s)</div>
+                            </div>
+                            <div id="lt-error" class="alert alert-danger" style="display:none;"></div>
+
+                            <div id="lt-chart-wrap" style="display:none;">
+                                <!-- Indikator badges -->
+                                <div id="lt-badges" class="mb-2 d-flex flex-wrap gap-1"></div>
+
+                                <!-- Halvening ciklus -->
+                                <div id="lt-halving" class="mb-2"></div>
+
+                                <!-- Charts -->
+                                <div style="font-size:0.75rem;color:#888;margin-bottom:2px;">Cijena + MA50 + MA200 + Bollinger + Fibonacci</div>
+                                <div id="lt-main-chart" style="width:100%;"></div>
+                                <div style="font-size:0.75rem;color:#888;margin:4px 0 2px;">RSI (14)</div>
+                                <div id="lt-rsi-chart" style="width:100%;"></div>
+                                <div style="font-size:0.75rem;color:#888;margin:4px 0 2px;">MACD</div>
+                                <div id="lt-macd-chart" style="width:100%;"></div>
+
+                                <!-- Legenda -->
+                                <div class="mt-2 d-flex flex-wrap gap-3" style="font-size:0.78rem;">
+                                    <span><span style="color:#f59e0b">━</span> MA50</span>
+                                    <span><span style="color:#6366f1">━━</span> MA200</span>
+                                    <span><span style="color:#63b3ed">╌</span> Bollinger</span>
+                                    <span><span style="color:#a78bfa">╌</span> Fib 0.236</span>
+                                    <span><span style="color:#818cf8">╌</span> Fib 0.382</span>
+                                    <span><span style="color:#60a5fa">╌</span> Fib 0.5</span>
+                                    <span><span style="color:#34d399">╌</span> Fib 0.618</span>
+                                    <span><span style="color:#fbbf24">╌</span> Fib 0.786</span>
+                                </div>
+
+                                <!-- Tekstualno objašnjenje -->
+                                <div class="mt-3 p-3 rounded" style="background:rgba(255,255,255,0.04);font-size:0.9rem;line-height:1.7;">
+                                    <div class="fw-bold mb-2 text-info">📋 Tehnička analiza — objašnjenje</div>
+                                    <div id="lt-explanation"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scanner sub-tab -->
+                        <div class="tab-pane fade" id="lt-tab-scan">
+                            <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
+                                <button id="lt-scan-btn" class="btn btn-primary btn-sm">Pokreni scanner (iz cachea)</button>
+                                <button id="lt-scan-force-btn" class="btn btn-outline-warning btn-sm">🔄 Osvježi (novi dohvat ~3 min)</button>
+                                <small id="lt-scan-cache-note" class="text-muted" style="display:none;">Podaci iz cachea (svježavaju se svaki sat)</small>
+                            </div>
+                            <div id="lt-scan-spinner" class="text-center py-4 text-muted" style="display:none;">
+                                <div class="spinner-border mb-2" role="status"></div>
+                                <div>Skeniram top 40 coinova... može potrajati 2-3 minute</div>
+                            </div>
+                            <div id="lt-scan-error" class="alert alert-danger" style="display:none;"></div>
+                            <div class="table-responsive" id="lt-scan-wrap" style="display:none;">
+                                <table class="table table-sm table-dark table-hover table-bordered mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Coin</th>
+                                            <th class="text-end">Cijena</th>
+                                            <th class="text-center">RSI dnevni</th>
+                                            <th class="text-center">RSI tjedni</th>
+                                            <th class="text-center">vs 200MA</th>
+                                            <th class="text-center">Od ATH</th>
+                                            <th class="text-center">Score</th>
+                                            <th>Signal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lt-scan-body"></tbody>
+                                </table>
+                                <small class="text-muted d-block mt-2 px-1">Klikni na coin za prikaz detaljne analize. Score = RSI dnevni 20% + RSI tjedni 30% + vs 200MA 30% + BB pozicija 20%. Veći = bolja zona za akumulaciju.</small>
+                            </div>
+
+                            <!-- Legenda -->
+                            <div class="mt-3 p-3 rounded" style="background:rgba(255,255,255,0.04);font-size:0.85rem;">
+                                <div class="fw-bold mb-1">Pojašnjenje:</div>
+                                <div><strong>RSI dnevni/tjedni</strong> — ispod 30 = preprodan (potencijalno dno), iznad 70 = overbought (potencijalni vrh)</div>
+                                <div class="mt-1"><strong>vs 200MA</strong> — koliko je cijena ispod (-) ili iznad (+) 200-dnevnog prosjeka. Ispod -30% = historijski dobre zone za akumulaciju.</div>
+                                <div class="mt-1"><strong>Od ATH</strong> — koliko je coin pao od svog vrha. Veći pad = veći potencijal, ali i veći rizik.</div>
+                                <div class="mt-1"><strong>Score 70+</strong> = preporučeno za dugoročno; <strong>45-69</strong> = čekaj bolji entry; <strong>ispod 45</strong> = nije trenutak</div>
+                                <div class="mt-2 text-warning">⚠️ Samo informativno — nije financijski savjet.</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script type="module">
     import { initAnalysis } from '/static/js/modules/analysis.js';
+    import { initLongTerm } from '/static/js/modules/long_term.js';
     initAnalysis();
+    initLongTerm();
 </script>
 {% endblock %}

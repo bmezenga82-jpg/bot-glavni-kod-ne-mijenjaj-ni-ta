@@ -829,6 +829,36 @@ def register_routes(app):
             logger.error(f"dca_analysis error: {e}", exc_info=True)
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/long_term_analysis", methods=["GET"])
+    @login_required
+    def long_term_analysis_route():
+        try:
+            from core.long_term_analysis import analyze_long_term
+            symbol = request.args.get('symbol', 'BTC/USDT').upper()
+            view_range = request.args.get('range', '1Y')
+            if view_range not in ('1M', '3M', '6M', '1Y', '3Y'):
+                view_range = '1Y'
+            result = analyze_long_term(symbol, view_range)
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"long_term_analysis error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/long_term_scan", methods=["GET"])
+    @login_required
+    def long_term_scan_route():
+        try:
+            from core.long_term_analysis import scan_top_coins
+            force = request.args.get('force', '') == '1'
+            if force:
+                import core.long_term_analysis as _lta
+                _lta._scan_cache = {'data': None, 'ts': 0}
+            results = scan_top_coins(top_n=40)
+            return jsonify(results)
+        except Exception as e:
+            logger.error(f"long_term_scan error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
     @app.route("/api/set_profit_mode", methods=["POST"])
     @login_required
     def set_profit_mode():
