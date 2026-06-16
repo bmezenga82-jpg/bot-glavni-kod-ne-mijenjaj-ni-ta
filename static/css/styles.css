@@ -29,7 +29,7 @@ html.light {
 body {
     background-color: var(--bg) !important;
     color: var(--text) !important;
-    font-size: 1rem;
+    font-size: 1.125rem;
     line-height: 1.4;
 }
 
@@ -122,7 +122,7 @@ h1 {
 .table {
     background-color: var(--card-bg) !important;
     color: var(--text) !important;
-    font-size: 1rem;
+    font-size: 1.125rem;
 }
 
 .table th, .table td {
@@ -156,7 +156,7 @@ h1 {
 }
 
 .small-table {
-    font-size: 0.875rem;
+    font-size: 1rem;
 }
 
 .small-table th,
@@ -165,11 +165,11 @@ h1 {
 }
 
 .small-text {
-    font-size: 0.875rem;
+    font-size: 1rem;
 }
 
 .xsmall-text {
-    font-size: 0.825rem;
+    font-size: 0.95rem;
 }
 
 .scroll-area {
