@@ -244,6 +244,16 @@ label.form-label {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+    body {
+        font-size: 1rem;
+    }
+    /* Override small/xsmall text helpers to stay readable on mobile */
+    .small-text {
+        font-size: 0.9rem !important;
+    }
+    .xsmall-text {
+        font-size: 0.875rem !important;
+    }
     .navbar-nav {
         text-align: center;
     }
@@ -254,16 +264,27 @@ label.form-label {
         margin: 10px 0;
     }
     .table {
-        font-size: 14px;
+        font-size: 0.875rem;
     }
     .table th, .table td {
-        padding: 8px;
+        padding: 5px 4px;
     }
     h1 {
         font-size: 1.5rem;
     }
+    /* Remove double padding: .card already adds padding, card-body adds more */
+    .card {
+        padding: 0 !important;
+    }
     .card-body {
-        padding: 10px;
+        padding: 8px !important;
+    }
+    .card-header {
+        padding: 6px 10px !important;
+    }
+    .container {
+        padding-left: 8px;
+        padding-right: 8px;
     }
     .form-control, .btn-outline-light {
         width: 100%;
@@ -272,17 +293,47 @@ label.form-label {
 }
 
 @media (max-width: 576px) {
+    body {
+        font-size: 1rem;
+    }
+    .small-text {
+        font-size: 0.875rem !important;
+    }
+    .xsmall-text {
+        font-size: 0.85rem !important;
+    }
     .table {
-        font-size: 12px;
+        font-size: 0.82rem;
     }
     .table th, .table td {
-        padding: 5px;
+        padding: 4px 3px;
     }
     h1 {
         font-size: 1.2rem;
     }
     .navbar-brand {
         font-size: 1.2rem;
+    }
+    .card-body {
+        padding: 6px !important;
+    }
+}
+
+/* Backtest fixed-height layout: disable on mobile (below lg breakpoint) */
+@media (max-width: 991px) {
+    #backtest-layout {
+        height: auto !important;
+    }
+    #backtest-left,
+    #backtest-right {
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+    #backtest-right .card {
+        min-height: 0 !important;
+    }
+    #backtest-results {
+        height: 400px !important;
     }
 }
 

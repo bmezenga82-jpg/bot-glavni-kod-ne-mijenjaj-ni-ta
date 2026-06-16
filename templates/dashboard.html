@@ -2,7 +2,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-<div class="container mt-5 dashboard-compact">
+<div class="container mt-1 mt-md-3 dashboard-compact">
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
