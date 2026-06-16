@@ -81,6 +81,7 @@ export function setupPairSelector(selected) {
 }
 
 let _lastBacktestMeta = null; // pamtimo parametre za save
+let _allFolders = [];        // flat lista svih mapa za dropdownove
 
 export function runBacktest() {
     const form = document.getElementById('backtest-form');
@@ -267,12 +268,14 @@ export function saveBacktest() {
     if (!_lastBacktestMeta) return;
     const nameEl = document.getElementById('save-test-name');
     const msgEl = document.getElementById('save-test-msg');
+    const folderEl = document.getElementById('save-test-folder');
     const name = nameEl?.value.trim() || `${_lastBacktestMeta.symbol} ${_lastBacktestMeta.buy_pct}/${_lastBacktestMeta.sell_pct}%`;
+    const folder_id = folderEl?.value ? parseInt(folderEl.value) : null;
 
     fetch('/api/backtest/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ..._lastBacktestMeta, name }),
+        body: JSON.stringify({ ..._lastBacktestMeta, name, folder_id }),
     })
     .then(r => r.json())
     .then(() => {
@@ -286,33 +289,132 @@ export function saveBacktest() {
     });
 }
 
+function _flattenFolders(folders, indent = 0) {
+    const result = [];
+    for (const f of folders) {
+        result.push({ id: f.id, name: f.name, indent });
+        if (f.children?.length) result.push(..._flattenFolders(f.children, indent + 1));
+    }
+    return result;
+}
+
+function _renderTestRow(t, indent = 0) {
+    const profit = t.net_profit ?? 0;
+    const safeName = t.name.replace(/'/g, "\\'");
+    return `
+    <div class="d-flex align-items-center gap-2 py-1 border-bottom" style="font-size:0.8rem; padding-left:${8 + indent * 16}px;">
+        <input type="checkbox" class="saved-test-cb" value="${t.id}" style="flex-shrink:0;">
+        <span class="flex-grow-1 text-truncate" title="${t.name}">
+            <strong>${t.name}</strong>
+            <span class="text-muted ms-1">${t.symbol} ${t.buy_pct}/${t.sell_pct}%</span>
+        </span>
+        <span class="${profit >= 0 ? 'text-success' : 'text-danger'}" style="white-space:nowrap;">
+            ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}
+        </span>
+        <button class="btn btn-xxs btn-outline-primary" style="padding:1px 5px;font-size:0.7rem;" onclick="openTest(${t.id})" title="Otvori">▶</button>
+        <button class="btn btn-xxs btn-outline-secondary" style="padding:1px 5px;font-size:0.7rem;" onclick="renameTest(${t.id},'${safeName}')" title="Preimenuj">✎</button>
+        <button class="btn btn-xxs btn-outline-warning" style="padding:1px 5px;font-size:0.7rem;" onclick="moveTest(${t.id})" title="Premjesti">↗</button>
+        <button class="btn btn-xxs btn-outline-danger" style="padding:1px 5px;font-size:0.7rem;" onclick="deleteTest(${t.id})" title="Obriši">✕</button>
+    </div>`;
+}
+
+function _renderFolderTree(folders, tests, indent = 0) {
+    let html = '';
+    for (const f of folders) {
+        const safeName = f.name.replace(/'/g, "\\'");
+        const folderTests = tests.filter(t => t.folder_id === f.id);
+        html += `
+        <div style="padding-left:${indent * 16}px;">
+            <div class="d-flex align-items-center gap-1 py-1" style="font-size:0.82rem; cursor:pointer;"
+                 onclick="this.nextElementSibling.classList.toggle('d-none')">
+                <span class="text-warning">📁</span>
+                <strong class="flex-grow-1">${f.name}</strong>
+                <button class="btn btn-xxs btn-outline-secondary" style="padding:1px 5px;font-size:0.7rem;"
+                    onclick="event.stopPropagation();renameFolder(${f.id},'${safeName}')">✎</button>
+                <button class="btn btn-xxs btn-outline-success" style="padding:1px 5px;font-size:0.7rem;"
+                    onclick="event.stopPropagation();createFolder(${f.id})">+</button>
+                <button class="btn btn-xxs btn-outline-danger" style="padding:1px 5px;font-size:0.7rem;"
+                    onclick="event.stopPropagation();deleteFolder(${f.id})">✕</button>
+            </div>
+            <div>
+                ${f.children?.length ? _renderFolderTree(f.children, tests, indent + 1) : ''}
+                ${folderTests.map(t => _renderTestRow(t, indent + 1)).join('')}
+                ${!f.children?.length && !folderTests.length ? `<div class="text-muted small ps-3 py-1">prazno</div>` : ''}
+            </div>
+        </div>`;
+    }
+    return html;
+}
+
 export function loadSavedTests() {
-    fetch('/api/backtest/saved')
-    .then(r => r.json())
-    .then(tests => {
+    Promise.all([
+        fetch('/api/backtest/folders').then(r => r.json()),
+        fetch('/api/backtest/saved').then(r => r.json()),
+    ]).then(([folders, tests]) => {
         window._savedTestsData = tests;
+        _allFolders = _flattenFolders(folders);
+
+        // Popuni dropdown za save
+        const folderSel = document.getElementById('save-test-folder');
+        if (folderSel) {
+            folderSel.innerHTML = '<option value="">— bez mape —</option>' +
+                _allFolders.map(f => `<option value="${f.id}">${'&nbsp;&nbsp;'.repeat(f.indent)}${f.name}</option>`).join('');
+        }
+
         const body = document.getElementById('saved-tests-body');
         if (!body) return;
-        if (!tests.length) {
-            body.innerHTML = '<div class="text-muted small text-center py-2">Nema sačuvanih testova.</div>';
-            return;
+
+        const rootTests = tests.filter(t => !t.folder_id);
+        let html = _renderFolderTree(folders, tests);
+        if (rootTests.length) {
+            html += rootTests.map(t => _renderTestRow(t, 0)).join('');
         }
-        body.innerHTML = tests.map(t => `
-            <div class="d-flex align-items-center gap-2 py-1 border-bottom" style="font-size:0.8rem;">
-                <input type="checkbox" class="saved-test-cb" value="${t.id}" style="flex-shrink:0;">
-                <span class="flex-grow-1 text-truncate" title="${t.name}">
-                    <strong>${t.name}</strong>
-                    <span class="text-muted ms-1">${t.symbol} ${t.buy_pct}/${t.sell_pct}% ${t.start_date||''}→${t.end_date||''}</span>
-                </span>
-                <span class="${(t.net_profit ?? 0) >= 0 ? 'text-success' : 'text-danger'}" style="white-space:nowrap;">
-                    ${(t.net_profit ?? 0) >= 0 ? '+' : ''}${(t.net_profit ?? 0).toFixed(2)}
-                </span>
-                <button class="btn btn-xxs btn-outline-primary" style="padding:1px 5px;font-size:0.7rem;" onclick="openTest(${t.id})" title="Otvori i pokreni">▶</button>
-                <button class="btn btn-xxs btn-outline-secondary" style="padding:1px 5px;font-size:0.7rem;" onclick="renameTest(${t.id},'${t.name.replace(/'/g,'\\\'')}')" title="Preimenuj">✎</button>
-                <button class="btn btn-xxs btn-outline-danger" style="padding:1px 5px;font-size:0.7rem;" onclick="deleteTest(${t.id})" title="Obriši">✕</button>
-            </div>`).join('');
+        if (!html) html = '<div class="text-muted small text-center py-2">Nema sačuvanih testova.</div>';
+        body.innerHTML = html;
     })
     .catch(() => {});
+}
+
+export function createFolder(parentId = null) {
+    const name = prompt('Naziv mape:');
+    if (!name?.trim()) return;
+    fetch('/api/backtest/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), parent_id: parentId || null }),
+    }).then(() => loadSavedTests());
+}
+
+export function renameFolder(id, currentName) {
+    const newName = prompt('Novi naziv:', currentName);
+    if (!newName || newName === currentName) return;
+    fetch(`/api/backtest/folders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+    }).then(() => loadSavedTests());
+}
+
+export function deleteFolder(id) {
+    if (!confirm('Obrisati mapu? Testovi ostaju, premještaju se u root.')) return;
+    fetch(`/api/backtest/folders/${id}`, { method: 'DELETE' })
+    .then(() => loadSavedTests());
+}
+
+export function moveTest(id) {
+    const opts = [{ id: null, label: '— bez mape (root) —' }]
+        .concat(_allFolders.map(f => ({ id: f.id, label: ' '.repeat(f.indent * 2) + f.name })));
+    const choice = prompt(
+        'Premjesti u mapu:\n' + opts.map((o, i) => `${i}: ${o.label}`).join('\n') + '\n\nUnesi broj:'
+    );
+    if (choice === null || choice === '') return;
+    const idx = parseInt(choice);
+    if (isNaN(idx) || idx < 0 || idx >= opts.length) return;
+    fetch(`/api/backtest/saved/${id}/move`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder_id: opts[idx].id }),
+    }).then(() => loadSavedTests());
 }
 
 export function deleteTest(id) {

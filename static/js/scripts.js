@@ -128,6 +128,10 @@ async function initializeApp() {
         window.renameTest = settingsModule.renameTest;
         window.openTest = settingsModule.openTest;
         window.compareSelected = settingsModule.compareSelected;
+        window.createFolder = settingsModule.createFolder;
+        window.renameFolder = settingsModule.renameFolder;
+        window.deleteFolder = settingsModule.deleteFolder;
+        window.moveTest = settingsModule.moveTest;
 
         // Učitaj sačuvane testove pri otvaranju stranice
         settingsModule.loadSavedTests();

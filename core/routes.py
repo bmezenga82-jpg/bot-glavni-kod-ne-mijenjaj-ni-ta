@@ -37,7 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-from core.models import ProfitLog, BacktestResult  # Added for P&L calculation
+from core.models import ProfitLog, BacktestResult, BacktestFolder  # Added for P&L calculation
 from sqlalchemy import func  # Added for P&L calculation
 from datetime import datetime, timedelta
 
@@ -212,6 +212,60 @@ def register_routes(app):
     def optimize_route():
         return optimize()
 
+    @app.route("/api/backtest/folders", methods=["GET"])
+    @login_required
+    def get_backtest_folders():
+        def folder_to_dict(f):
+            return {
+                'id': f.id, 'name': f.name, 'parent_id': f.parent_id,
+                'children': [folder_to_dict(c) for c in sorted(f.children, key=lambda x: x.name)],
+            }
+        roots = BacktestFolder.query.filter_by(parent_id=None).order_by(BacktestFolder.name).all()
+        return jsonify([folder_to_dict(f) for f in roots])
+
+    @app.route("/api/backtest/folders", methods=["POST"])
+    @login_required
+    def create_backtest_folder():
+        from core.extensions import db as _db
+        data = request.get_json()
+        f = BacktestFolder(name=data['name'], parent_id=data.get('parent_id'))
+        _db.session.add(f)
+        _db.session.commit()
+        return jsonify({'id': f.id, 'name': f.name, 'parent_id': f.parent_id})
+
+    @app.route("/api/backtest/folders/<int:folder_id>", methods=["PATCH"])
+    @login_required
+    def rename_backtest_folder(folder_id):
+        from core.extensions import db as _db
+        f = BacktestFolder.query.get_or_404(folder_id)
+        data = request.get_json()
+        f.name = data.get('name', f.name)
+        _db.session.commit()
+        return jsonify({'ok': True})
+
+    @app.route("/api/backtest/folders/<int:folder_id>", methods=["DELETE"])
+    @login_required
+    def delete_backtest_folder(folder_id):
+        from core.extensions import db as _db
+        f = BacktestFolder.query.get_or_404(folder_id)
+        # Premjesti testove u root (null folder)
+        BacktestResult.query.filter_by(folder_id=folder_id).update({'folder_id': None})
+        # Premjesti podmape u root
+        BacktestFolder.query.filter_by(parent_id=folder_id).update({'parent_id': None})
+        _db.session.delete(f)
+        _db.session.commit()
+        return jsonify({'ok': True})
+
+    @app.route("/api/backtest/saved/<int:test_id>/move", methods=["PATCH"])
+    @login_required
+    def move_backtest_to_folder(test_id):
+        from core.extensions import db as _db
+        t = BacktestResult.query.get_or_404(test_id)
+        data = request.get_json()
+        t.folder_id = data.get('folder_id')  # None = root
+        _db.session.commit()
+        return jsonify({'ok': True})
+
     @app.route("/api/backtest/saved", methods=["GET"])
     @login_required
     def get_saved_backtests():
@@ -224,7 +278,7 @@ def register_routes(app):
             'buy_pct': t.buy_pct, 'sell_pct': t.sell_pct,
             'amount': t.amount, 'total_capital': t.total_capital,
             'timeframe': t.timeframe, 'start_date': t.start_date, 'end_date': t.end_date,
-            'profit_mode': t.profit_mode, 'net_profit': t.net_profit,
+            'folder_id': t.folder_id, 'profit_mode': t.profit_mode, 'net_profit': t.net_profit,
             'total_pnl': t.total_pnl, 'roi_pct': t.roi_pct,
             'annualized_roi': t.annualized_roi, 'trade_count': t.trade_count,
             'open_positions': t.open_positions, 'period_days': t.period_days,

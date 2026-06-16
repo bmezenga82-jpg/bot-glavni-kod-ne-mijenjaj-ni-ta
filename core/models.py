@@ -99,6 +99,14 @@ class GlobalTarget(db.Model):
     include_rebalancing = db.Column(db.Boolean, default=True)
 
 
+class BacktestFolder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('backtest_folder.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    children = db.relationship('BacktestFolder', backref=db.backref('parent', remote_side='BacktestFolder.id'))
+
+
 class BacktestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -113,6 +121,7 @@ class BacktestResult(db.Model):
     start_date = db.Column(db.String(10))
     end_date = db.Column(db.String(10))
     profit_mode = db.Column(db.String(10), default='usdc')
+    folder_id = db.Column(db.Integer, db.ForeignKey('backtest_folder.id'), nullable=True)
     net_profit = db.Column(db.Float)
     total_pnl = db.Column(db.Float)
     roi_pct = db.Column(db.Float)
