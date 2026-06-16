@@ -208,12 +208,12 @@
                         <div class="tab-pane fade" id="lt-tab-scan">
                             <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
                                 <button id="lt-scan-btn" class="btn btn-primary btn-sm">Pokreni scanner (iz cachea)</button>
-                                <button id="lt-scan-force-btn" class="btn btn-outline-warning btn-sm">🔄 Osvježi (novi dohvat ~3 min)</button>
-                                <small id="lt-scan-cache-note" class="text-muted" style="display:none;">Podaci iz cachea (svježavaju se svaki sat)</small>
+                                <button id="lt-scan-force-btn" class="btn btn-outline-warning btn-sm">🔄 Osvježi (novi dohvat ~30s)</button>
+                                <small id="lt-scan-cache-note" class="text-muted" style="display:none;">Podaci iz cachea (osvježavaju se svaki sat)</small>
                             </div>
                             <div id="lt-scan-spinner" class="text-center py-4 text-muted" style="display:none;">
                                 <div class="spinner-border mb-2" role="status"></div>
-                                <div>Skeniram top 40 coinova... može potrajati 2-3 minute</div>
+                                <div>Skeniram top 25 coinova... može potrajati ~30s</div>
                             </div>
                             <div id="lt-scan-error" class="alert alert-danger" style="display:none;"></div>
                             <div class="table-responsive" id="lt-scan-wrap" style="display:none;">
@@ -232,7 +232,7 @@
                                     </thead>
                                     <tbody id="lt-scan-body"></tbody>
                                 </table>
-                                <small class="text-muted d-block mt-2 px-1">Klikni na coin za prikaz detaljne analize. Score = RSI dnevni 20% + RSI tjedni 30% + vs 200MA 30% + BB pozicija 20%. Veći = bolja zona za akumulaciju.</small>
+                                <small class="text-muted d-block mt-2 px-1">Klikni na coin za prikaz detaljne analize s ciljevima za prodaju. Score = RSI dnevni 20% + RSI tjedni 30% + vs 200MA 30% + BB 20%. Veći = bolja zona za akumulaciju.</small>
                             </div>
 
                             <!-- Legenda -->

@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import logging
 from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -236,13 +235,29 @@ def _explanation(symbol, price, rsi_d, rsi_w, vs_200ma, ath_pct, fib_r, fib_e, m
         pct = (nearest_res[1] / price - 1) * 100
         lines.append(f"🟣 Fib otpor: razina {nearest_res[0]} na ${nearest_res[1]:.4f} (+{pct:.1f}% od sad)")
 
-    # Upside targets
+    # Upside / sell targets
+    lines.append("")
+    lines.append("── CILJEVI ZA PRODAJU ──────────────────────────────")
+
+    # Fibonacci extension (upside)
     targets = [(lvl, p) for lvl, p in sorted(fib_e.items(), key=lambda x: float(x[0])) if p > price]
     if targets:
-        t_lines = [f"  • {lvl}× → ${p:.4f} (+{(p/price-1)*100:.0f}%)" for lvl, p in targets[:3]]
-        lines.append("🎯 Potencijalni upside ciljevi (Fib ekstenzija):\n" + "\n".join(t_lines))
+        t_lines = [f"  • Fib {lvl}× → ${p:.4f} (+{(p/price-1)*100:.0f}%)" for lvl, p in targets[:4]]
+        lines.append("🎯 Fibonacci upside ciljevi:\n" + "\n".join(t_lines))
+
+    # ATH kao cilj
+    ath_val = max(fib_r.values())
+    ath_gain = (ath_val / price - 1) * 100
+    if ath_gain > 5:
+        lines.append(f"🏔️ Prethodni ATH: ${ath_val:.4f} (+{ath_gain:.0f}% od sad) — historijski otpor/cilj")
+
+    # RSI zona za prodaju
+    lines.append("📈 RSI zona prodaje: RSI > 70 (overbought) — razmotri djelomičnu prodaju")
+    lines.append("📈 RSI zona jake prodaje: RSI > 80 — historijski blizu kratkoročnog vrha")
 
     # MACD
+    lines.append("")
+    lines.append("── MOMENTUM ────────────────────────────────────────")
     lines.append("✅ MACD: bullish momentum." if macd_bull else "⚠️ MACD: bearish momentum, trend pada.")
 
     # BTC korelacija
@@ -383,7 +398,8 @@ def analyze_long_term(symbol, view_range='1Y'):
     }
 
 
-def _scan_one(sym):
+def _scan_one(sym, tickers_data):
+    """Scan a single coin using pre-fetched ticker data for speed."""
     try:
         df = _fetch_ohlcv(sym, '1d', 220)
         if len(df) < 50:
@@ -401,11 +417,15 @@ def _scan_one(sym):
         bb_pct = (price - bb_lo_v) / bb_range * 100 if bb_range > 0 else 50
         ath = float(df['high'].max())
         ath_pct = ((price / ath) - 1) * 100
+        # Weekly RSI — fetch separately (1 extra call per coin)
+        # Weekly RSI iz daily podataka (bez extra API poziva)
         rsi_w = None
         try:
-            df_w = _fetch_ohlcv(sym, '1w', 60)
+            df_ts = df.copy()
+            df_ts = df_ts.set_index('ts')
+            df_w = df_ts['close'].resample('W').last().dropna()
             if len(df_w) >= 15:
-                rsi_w = float(_rsi_series(df_w['close']).iloc[-1])
+                rsi_w = float(_rsi_series(df_w).iloc[-1])
         except Exception:
             pass
         score = _score(rsi_d, rsi_w, vs_200ma, bb_pct)
@@ -428,7 +448,8 @@ def _scan_one(sym):
         return None
 
 
-def scan_top_coins(top_n=40):
+def scan_top_coins(top_n=25):
+    """Scan top coins sequentially (safe with eventlet/gevent)."""
     global _scan_cache
     now = datetime.now(timezone.utc).timestamp()
     if _scan_cache['data'] and (now - _scan_cache['ts']) < CACHE_TTL:
@@ -446,12 +467,11 @@ def scan_top_coins(top_n=40):
     pairs = [sym for sym, _ in usdt[:top_n]]
 
     results = []
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        futures = {pool.submit(_scan_one, sym): sym for sym in pairs}
-        for fut in as_completed(futures):
-            res = fut.result()
-            if res:
-                results.append(res)
+    # Sequential to avoid eventlet threading issues
+    for sym in pairs:
+        res = _scan_one(sym, tickers.get(sym, {}))
+        if res:
+            results.append(res)
 
     results.sort(key=lambda x: x['score'], reverse=True)
     _scan_cache = {'data': results, 'ts': now}
