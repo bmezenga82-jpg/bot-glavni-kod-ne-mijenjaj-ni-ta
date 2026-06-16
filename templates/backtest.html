@@ -99,12 +99,26 @@
                 <input type="hidden" id="compare_symbols" name="compare_symbols">
             </div>
 
-            <div class="mb-2">
+            <div class="mb-2 p-2 border rounded" style="background:rgba(0,0,0,0.1);">
+                <label class="form-label mb-1" style="font-size:0.87rem;">Način Optimize usporedbe</label>
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="radio" name="optimize_mode" id="opt_mode_coverage" value="coverage" checked>
+                    <label class="form-check-label" for="opt_mode_coverage" style="font-size:0.87rem;">
+                        Fiksirana pokrivenost pada
+                        <small class="text-muted d-block" style="font-size:0.78rem;">Svaki buy% dobiva amount koji pokriva isti % pada — poštena usporedba profita</small>
+                    </label>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-2 ms-3" id="coverage-input-wrap">
+                    <label style="font-size:0.84rem; white-space:nowrap;">Ciljna pokrivenost:</label>
+                    <input type="number" class="form-control form-control-sm" id="target_coverage_pct"
+                           name="target_coverage_pct" value="63" min="10" max="99" step="1" style="width:70px;">
+                    <span style="font-size:0.84rem;">%</span>
+                </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="normalize_amount" name="normalize_amount" checked>
-                    <label class="form-check-label" style="font-size:0.87rem;">
-                        Fer usporedba — skaliraj iznos s buy%
-                        <small class="text-muted d-block" style="font-size:0.78rem;">0.8%→80, 1%→100, 2%→200 USDC (samo za Optimize)</small>
+                    <input class="form-check-input" type="radio" name="optimize_mode" id="opt_mode_normalize" value="normalize">
+                    <label class="form-check-label" for="opt_mode_normalize" style="font-size:0.87rem;">
+                        Proporcionalni iznos (stari način)
+                        <small class="text-muted d-block" style="font-size:0.78rem;">0.8%→80, 1%→100, 2%→200 USDC</small>
                     </label>
                 </div>
             </div>
@@ -215,6 +229,21 @@ function updateCapitalCalc() {
             : ` <span class="text-success">✓</span>`);
 }
 
+function updateOptimizeMode() {
+    const mode = document.querySelector('input[name="optimize_mode"]:checked')?.value;
+    const wrap = document.getElementById('coverage-input-wrap');
+    const coverageInput = document.getElementById('target_coverage_pct');
+    if (wrap) wrap.style.display = mode === 'coverage' ? 'flex' : 'none';
+    if (coverageInput) coverageInput.name = mode === 'coverage' ? 'target_coverage_pct' : '';
+    // normalize_amount checkbox — stari način
+    const normCb = document.getElementById('normalize_amount');
+    if (normCb) normCb.value = mode === 'normalize' ? 'on' : '';
+}
+
+document.querySelectorAll('input[name="optimize_mode"]').forEach(r =>
+    r.addEventListener('change', updateOptimizeMode)
+);
+
 function updateCompareList() {
     const primary = document.getElementById('symbol').value;
     document.querySelectorAll('.compare-pair-cb').forEach(cb => {
@@ -229,6 +258,7 @@ function updateCompareList() {
 document.addEventListener('DOMContentLoaded', () => {
     updateCapitalCalc();
     updateCompareList();
+    updateOptimizeMode();
 });
 </script>
 {% endblock %}

@@ -57,15 +57,23 @@ def optimize():
     buy_percentage = abs(float(request.form.get('buy_percentage', 1.0)))
     normalize_amount = 'normalize_amount' in request.form
 
+    # Novi način: fiksirana pokrivenost pada
+    target_coverage_raw = request.form.get('target_coverage_pct', '').strip()
+    target_coverage_pct = float(target_coverage_raw) if target_coverage_raw else None
+
     pair = {
         'symbol': symbol,
         'exchange': exchange,
         'amount': amount,
-        'buy_pct_ref': buy_percentage,  # referentni postotak za skaliranje iznosa
+        'buy_pct_ref': buy_percentage,
         'total_capital': total_capital,
         'timeframe': timeframe,
     }
-    opt = optimize_strategy(pair, buy_range, sell_range, start_date, end_date, top_n=5, normalize_amount=normalize_amount)
+    opt = optimize_strategy(
+        pair, buy_range, sell_range, start_date, end_date, top_n=5,
+        normalize_amount=normalize_amount,
+        target_coverage_pct=target_coverage_pct,
+    )
     if not opt or not opt.get('top_by_pnl'):
         return jsonify({'error': 'Could not fetch data or no results'}), 500
     return jsonify({
@@ -81,5 +89,7 @@ def optimize():
             'buy_pct_ref': buy_percentage,
             'total_capital': total_capital,
             'normalize_amount': normalize_amount,
+            'target_coverage_pct': target_coverage_pct,
+            'coverage_mode': opt.get('coverage_mode', False),
         }
     })

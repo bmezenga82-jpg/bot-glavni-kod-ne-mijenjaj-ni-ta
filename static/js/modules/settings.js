@@ -525,7 +525,8 @@ export function runOptimize() {
         }
         const optimizeBy = document.getElementById('optimize_by')?.value || 'realized';
         const m = data.meta || {};
-        const primaryList  = optimizeBy === 'realized' ? (data.top_by_realized || []) : data.top_combos;
+        const coverageMode = m.coverage_mode || false;
+        const primaryList   = optimizeBy === 'realized' ? (data.top_by_realized || []) : data.top_combos;
         const secondaryList = optimizeBy === 'realized' ? data.top_combos : (data.top_by_realized || []);
         const primaryLabel   = optimizeBy === 'realized'
             ? 'TOP 5 po REALIZIRANOM PROFITU (samo zatvoreni ciklusi)\n  ✓ Stabilan — ne ovisi o smjeru tržišta'
@@ -540,16 +541,21 @@ export function runOptimize() {
             const sd = m.start_date || '2023-01-01 (default)';
             const ed = m.end_date   || 'danas (default)';
             text += `Period:    ${sd} → ${ed} (${m.timeframe})\n`;
-            if (m.normalize_amount) {
-                text += `Iznos:     SKALIRAN — referenca ${m.amount} USDC pri ${m.buy_pct_ref}%  |  Kapital: ${m.total_capital} USDC\n`;
-                text += `           → npr. 0.8% koristi ${(m.amount * 0.8 / m.buy_pct_ref).toFixed(0)} USDC, 2% koristi ${(m.amount * 2 / m.buy_pct_ref).toFixed(0)} USDC\n`;
+            text += `Kapital:   ${m.total_capital} USDC\n`;
+            if (coverageMode) {
+                text += `Način:     FIKSIRANA POKRIVENOST PADA ${m.target_coverage_pct}%\n`;
+                text += `           → Svaki buy% dobiva amount koji pokriva ${m.target_coverage_pct}% pada\n`;
+                text += `           → Profit je direktno usporediv — isti rizik, različiti iznosi\n`;
+            } else if (m.normalize_amount) {
+                text += `Iznos:     SKALIRAN proporcionalno buy%  |  referenca ${m.amount} USDC pri ${m.buy_pct_ref}%\n`;
             } else {
-                text += `Per-trade: ${m.amount} USDC (fiksno)  |  Kapital: ${m.total_capital} USDC\n`;
+                text += `Per-trade: ${m.amount} USDC (fiksno)\n`;
             }
         }
         const fmtCombo = (c, i) => {
-            const amtStr = c.amount != null ? ` [iznos: ${c.amount} USDC]` : '';
-            let s = `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%${amtStr}\n`;
+            const amtStr = c.amount != null ? ` | Iznos: ${c.amount} USDC` : '';
+            const covStr = c.coverage_pct != null ? ` | Pokrivenost: ${c.coverage_pct}%` : '';
+            let s = `#${i + 1}  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%${amtStr}${covStr}\n`;
             s += `     Realizirano:     ${c.net_profit >= 0 ? '+' : ''}${c.net_profit.toFixed(4)} USDC\n`;
             s += `     Nerealizirano:   ${c.unrealized_pnl >= 0 ? '+' : ''}${c.unrealized_pnl.toFixed(4)} USDC\n`;
             s += `     Ukupni P&L:      ${c.total_pnl >= 0 ? '+' : ''}${c.total_pnl.toFixed(4)} USDC (${c.roi_pct.toFixed(2)}% ROI)\n`;
@@ -559,17 +565,17 @@ export function runOptimize() {
             return s;
         };
 
-        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        text += '━'.repeat(50) + '\n';
         text += `  ${primaryLabel}\n`;
-        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+        text += '━'.repeat(50) + '\n\n';
         primaryList.forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
 
-        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        text += '━'.repeat(50) + '\n';
         text += `  ${secondaryLabel}\n`;
-        text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+        text += '━'.repeat(50) + '\n\n';
         secondaryList.forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
 
-        text += '═══════════════════════════════════════════════════\n';
+        text += '═'.repeat(51) + '\n';
         resultsEl.textContent = text;
     })
     .catch(error => {

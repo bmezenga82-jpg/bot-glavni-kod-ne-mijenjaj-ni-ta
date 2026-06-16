@@ -231,14 +231,33 @@ def run_backtest(pairs, start_date=None, end_date=None):
     return results
 
 
-def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=None, top_n=5, normalize_amount=False):
+def _amount_for_coverage(total_capital: float, buy_pct: float, target_coverage_pct: float) -> float:
     """
-    Test all buy/sell % combinations and return the top_n by total P&L.
+    Izračunaj iznos po trejdu koji postiže target_coverage_pct pokrivenosti pada.
 
-    normalize_amount=True: scale per-trade amount so all combos cover the same
-    downside % with the same total capital. Reference point = pair['buy_pct_ref']
-    and pair['amount']. E.g. 300 USDC at 3% ref → 0.8% uses 80 USDC.
-    Formula: amount = ref_amount * (tested_buy_pct / ref_buy_pct)
+    coverage = 1 - (1 - buy_pct/100)^n  →  n = log(1-coverage) / log(1-buy_pct/100)
+    amount = total_capital / (n + 1)
+    """
+    import math
+    step = 1 - buy_pct / 100
+    if step <= 0 or step >= 1 or target_coverage_pct <= 0:
+        return total_capital
+    target_coverage_pct = min(target_coverage_pct, 99.0)
+    n = math.ceil(math.log(1 - target_coverage_pct / 100) / math.log(step))
+    n = max(1, n)
+    return max(round(total_capital / (n + 1), 2), 1.0)
+
+
+def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=None, top_n=5,
+                      normalize_amount=False, target_coverage_pct=None):
+    """
+    Test all buy/sell % combinations and return the top_n by realized profit.
+
+    normalize_amount=True: stari način — skalira amount proporcionalno buy%.
+    target_coverage_pct (float, npr. 63.0): novi način — za svaki buy% izračunava
+        amount koji postiže tu pokrivenost pada uz dani total_capital.
+        Npr. 10000 USDC, 63% pokrivenost → 1% buy daje ~100 USDC, 2% buy daje ~196 USDC.
+        Sve kombinacije pokrivaju isti pad, pa je usporedba profita poštena.
     """
     symbol = pair['symbol']
     exchange_name = pair['exchange']
@@ -248,6 +267,8 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
     total_capital = pair.get('total_capital', base_amount)
 
     print(f"[OPTIMIZER] {symbol} on {exchange_name} — testing {len(buy_range) * len(sell_range)} combinations...")
+    if target_coverage_pct:
+        print(f"[OPTIMIZER] Način: fiksirana pokrivenost pada {target_coverage_pct}% | Kapital: {total_capital}")
 
     exchange_class = getattr(ccxt, exchange_name)
     exchange = exchange_class({'enableRateLimit': True})
@@ -280,9 +301,22 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
     results = []
 
     for buy_pct in buy_range:
-        # amount = ref_amount * (tested_pct / ref_pct): npr. 300 USDC pri 3% → 0.8% daje 80 USDC
-        amount = round(base_amount * abs(buy_pct) / ref_buy_pct, 2) if normalize_amount else base_amount
+        if target_coverage_pct:
+            # Novi način: amount koji postiže fiksiranu pokrivenost pada
+            amount = _amount_for_coverage(total_capital, abs(buy_pct), target_coverage_pct)
+        elif normalize_amount:
+            # Stari način: proporcionalno skaliranje
+            amount = round(base_amount * abs(buy_pct) / ref_buy_pct, 2)
+        else:
+            amount = base_amount
         amount = max(amount, 1.0)
+
+        # Stvarna pokrivenost za ovaj buy% i amount
+        import math
+        step = 1 - abs(buy_pct) / 100
+        num_levels = max(1, int(total_capital / amount))
+        actual_coverage = round((1 - step ** (num_levels - 1)) * 100, 1) if num_levels > 1 else 0.0
+
         for sell_pct in sell_range:
             r = _simulate_grid(ohlcv, amount, abs(buy_pct), abs(sell_pct), total_capital=total_capital)
             ann = None
@@ -292,6 +326,7 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
                 'buy_pct': buy_pct,
                 'sell_pct': sell_pct,
                 'amount': round(amount, 2),
+                'coverage_pct': actual_coverage,
                 'total_pnl': r['total_pnl'],
                 'net_profit': r['net_profit'],
                 'unrealized_pnl': r['unrealized_pnl'],
@@ -301,14 +336,20 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
                 'annualized_roi': ann,
             })
 
-    # Filtar: max pozicija = total_capital / base_amount + 10% tolerancija
-    max_allowed_positions = int(total_capital / base_amount * 1.10)
-    results = [r for r in results if r['open_positions'] <= max_allowed_positions]
+    # U coverage načinu nema filtra po max_pozicija — amount je već izračunat za kapital
+    if not target_coverage_pct:
+        max_allowed_positions = int(total_capital / base_amount * 1.10)
+        results = [r for r in results if r['open_positions'] <= max_allowed_positions]
 
-    # Top 5 po ukupnom P&L (realized + unrealized)
-    top_by_pnl = sorted(results, key=lambda x: x['total_pnl'], reverse=True)[:top_n]
-
-    # Top 5 po realiziranom profitu (bez unrealized — stabilan bez obzira na tržišni smjer)
+    # Top po realiziranom profitu (stabilan, neovisno o smjeru tržišta)
     top_by_realized = sorted(results, key=lambda x: x['net_profit'], reverse=True)[:top_n]
 
-    return {'top_by_pnl': top_by_pnl, 'top_by_realized': top_by_realized}
+    # Top po ukupnom P&L (realized + unrealized)
+    top_by_pnl = sorted(results, key=lambda x: x['total_pnl'], reverse=True)[:top_n]
+
+    return {
+        'top_by_pnl': top_by_pnl,
+        'top_by_realized': top_by_realized,
+        'coverage_mode': bool(target_coverage_pct),
+        'target_coverage_pct': target_coverage_pct,
+    }
