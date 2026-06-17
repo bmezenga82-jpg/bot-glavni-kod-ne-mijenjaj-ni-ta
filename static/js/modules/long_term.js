@@ -10,6 +10,14 @@ export function initLongTerm() {
     document.getElementById('lt-symbol')?.addEventListener('keydown', e => {
         if (e.key === 'Enter') runLongTermAnalysis();
     });
+    // Sinkroniziraj watchlist sa servera (samo ako localStorage prazno)
+    if (!localStorage.getItem('lt_watchlist')) {
+        fetch('/api/watchlist').then(r => r.json()).then(data => {
+            if (data.scanner?.length) {
+                localStorage.setItem('lt_watchlist', JSON.stringify(data.scanner));
+            }
+        }).catch(() => {});
+    }
 }
 
 // ── LONG-TERM CHART ──────────────────────────────────────────────────────────
@@ -75,10 +83,15 @@ function renderChart(data) {
     });
     candleSeries.setData(data.candles);
 
-    // SMA 50
-    if (data.sma50?.length) {
-        const s = _ltChart.addLineSeries({ color: '#f59e0b', lineWidth: 1, title: 'MA50' });
-        s.setData(data.sma50);
+    // EMA 20 (kratkoročni trend)
+    if (data.ema20?.length) {
+        const s = _ltChart.addLineSeries({ color: '#34d399', lineWidth: 1, title: 'EMA20' });
+        s.setData(data.ema20);
+    }
+    // EMA 50
+    if (data.ema50?.length) {
+        const s = _ltChart.addLineSeries({ color: '#f59e0b', lineWidth: 1, title: 'EMA50' });
+        s.setData(data.ema50);
     }
     // SMA 200
     if (data.sma200?.length) {
@@ -148,7 +161,11 @@ function renderIndicatorBadges(data) {
     const vs200 = ind.vs_200ma;
     const ath = ind.ath_pct;
     const corr = ind.btc_correlation;
-    const score = ind.score;
+    const buyScore = ind.buy_score;
+    const sellScore = ind.sell_score;
+    const trendShort = ind.trend_short;
+    const trendLong = ind.trend_long;
+    const volTrend = ind.vol_trend;
 
     function rsiClass(v) {
         if (v < 30) return 'bg-success';
@@ -163,11 +180,19 @@ function renderIndicatorBadges(data) {
         if (v < 20) return 'bg-warning text-dark';
         return 'bg-danger';
     }
-    function scoreClass(v) {
-        if (v >= 70) return 'bg-success';
-        if (v >= 50) return 'bg-warning text-dark';
+    function buyScoreClass(v) {
+        if (v >= 65) return 'bg-success';
+        if (v >= 45) return 'bg-warning text-dark';
         return 'bg-danger';
     }
+    function sellScoreClass(v) {
+        if (v >= 65) return 'bg-danger';
+        if (v >= 45) return 'bg-warning text-dark';
+        return 'bg-secondary';
+    }
+
+    const volMap = { increasing: '↑ Raste', decreasing: '↓ Pada', neutral: '→ Neutralan' };
+    const volColorMap = { increasing: 'bg-success', decreasing: 'bg-warning text-dark', neutral: 'bg-secondary' };
 
     el.innerHTML = `
         <span class="badge ${rsiClass(rsiD)} me-1">RSI(D) ${rsiD}</span>
@@ -175,8 +200,12 @@ function renderIndicatorBadges(data) {
         <span class="badge ${vs200Class(vs200)} me-1">vs 200MA ${vs200 > 0 ? '+' : ''}${vs200}%</span>
         <span class="badge bg-secondary me-1">Od ATH ${ath}%</span>
         ${corr !== null ? `<span class="badge bg-secondary me-1">BTC korr. ${corr}</span>` : ''}
-        <span class="badge ${scoreClass(score)} fs-6 ms-2">Score ${score}/100</span>
-        <span class="badge ${ind.macd_bull ? 'bg-success' : 'bg-danger'} me-1 ms-2">MACD ${ind.macd_bull ? '↑ Bull' : '↓ Bear'}</span>
+        <span class="badge ${trendShort === 'bull' ? 'bg-success' : 'bg-danger'} me-1 ms-2">K: ${trendShort === 'bull' ? '📈 Bull' : '📉 Bear'}</span>
+        <span class="badge ${trendLong === 'bull' ? 'bg-success' : 'bg-danger'} me-1">D: ${trendLong === 'bull' ? '📈 Bull' : '📉 Bear'}</span>
+        <span class="badge ${volColorMap[volTrend] || 'bg-secondary'} me-1">Vol ${volMap[volTrend] || volTrend}</span>
+        <span class="badge ${ind.macd_bull ? 'bg-success' : 'bg-danger'} me-1">MACD ${ind.macd_bull ? '↑ Bull' : '↓ Bear'}</span>
+        <span class="badge ${buyScoreClass(buyScore)} fs-6 ms-2">BUY ${buyScore}/100</span>
+        <span class="badge ${sellScoreClass(sellScore)} fs-6 ms-1">SELL ${sellScore}/100</span>
     `;
 }
 
@@ -267,6 +296,34 @@ async function runScanner(force = false) {
     }
 }
 
+// ── Watchlist helpers ─────────────────────────────────────────────────────────
+
+function _getWatchlist() {
+    try { return JSON.parse(localStorage.getItem('lt_watchlist') || '[]'); } catch { return []; }
+}
+function _setWatchlist(list) {
+    localStorage.setItem('lt_watchlist', JSON.stringify(list));
+    // Persist to server (fire and forget)
+    fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scanner: list, spot_pairs: [] })
+    }).catch(() => {});
+}
+function _toggleWatch(sym, cb) {
+    let list = _getWatchlist();
+    if (list.includes(sym)) {
+        list = list.filter(s => s !== sym);
+        cb.checked = false;
+    } else {
+        list.push(sym);
+        cb.checked = true;
+    }
+    _setWatchlist(list);
+}
+
+// ── Render scanner results ────────────────────────────────────────────────────
+
 function renderScanResults(data, ageMins) {
     const scanBody = document.getElementById('lt-scan-body');
     const wrap = document.getElementById('lt-scan-wrap');
@@ -274,9 +331,11 @@ function renderScanResults(data, ageMins) {
 
     wrap.style.display = 'block';
     if (ageMins !== null) {
-        cacheNote.textContent = `Podaci stari ${ageMins} min (osvježavaju se svaki sat)`;
+        cacheNote.textContent = `Podaci stari ${ageMins} min (osvježavaju se svaka 4h)`;
         cacheNote.style.display = '';
     }
+
+    const watched = _getWatchlist();
 
     function rC(v) {
         if (v < 30) return 'text-success fw-bold';
@@ -284,29 +343,55 @@ function renderScanResults(data, ageMins) {
         if (v > 70) return 'text-danger fw-bold';
         return '';
     }
-    function sC(v) {
+    function buyC(v) {
         if (v >= 65) return 'text-success fw-bold';
         if (v >= 45) return 'text-warning';
-        return 'text-danger';
+        return 'text-muted';
+    }
+    function sellC(v) {
+        if (v >= 65) return 'text-danger fw-bold';
+        if (v >= 45) return 'text-warning';
+        return 'text-muted';
+    }
+    function trendBadge(t) {
+        return t === 'bull'
+            ? '<span class="badge bg-success" style="font-size:0.65rem;">↑</span>'
+            : '<span class="badge bg-danger" style="font-size:0.65rem;">↓</span>';
     }
 
     scanBody.innerHTML = data.map(coin => {
         const rsiD = coin.rsi_daily;
         const rsiW = coin.rsi_weekly;
         const vs200 = coin.vs_200ma;
-        const score = coin.score;
-        return `<tr style="cursor:pointer;" onclick="window._ltOpenCoin('${coin.symbol}')">
-            <td><strong>${coin.symbol.replace('/USDT','')}</strong></td>
-            <td class="text-end">${coin.price}</td>
-            <td class="text-center ${rC(rsiD)}">${rsiD}</td>
-            <td class="text-center ${rsiW !== null ? rC(rsiW) : 'text-muted'}">${rsiW !== null ? rsiW : '—'}</td>
-            <td class="text-center ${vs200 < 0 ? 'text-success' : 'text-danger'}">${vs200 > 0 ? '+' : ''}${vs200}%</td>
-            <td class="text-center">${coin.ath_pct}%</td>
-            <td class="text-center ${sC(score)} fs-6">${score}</td>
-            <td>${coin.signal_hr}</td>
+        const buy = coin.buy_score;
+        const sell = coin.sell_score;
+        const sym = coin.symbol;
+        const isWatched = watched.includes(sym);
+        return `<tr>
+            <td class="text-center" onclick="event.stopPropagation()">
+                <input type="checkbox" class="form-check-input watch-cb" data-sym="${sym}"
+                    ${isWatched ? 'checked' : ''}
+                    title="Prati — notifikacija pri promjeni signala"
+                    onchange="window._ltToggleWatch('${sym}', this)">
+            </td>
+            <td style="cursor:pointer;" onclick="window._ltOpenCoin('${sym}')"><strong>${sym.replace('/USDT','')}</strong></td>
+            <td class="text-end" style="cursor:pointer;" onclick="window._ltOpenCoin('${sym}')">${coin.price}</td>
+            <td class="text-center ${rC(rsiD)}" onclick="window._ltOpenCoin('${sym}')">${rsiD}</td>
+            <td class="text-center ${rsiW !== null ? rC(rsiW) : 'text-muted'}" onclick="window._ltOpenCoin('${sym}')">${rsiW !== null ? rsiW : '—'}</td>
+            <td class="text-center ${vs200 < 0 ? 'text-success' : 'text-danger'}" onclick="window._ltOpenCoin('${sym}')">${vs200 > 0 ? '+' : ''}${vs200}%</td>
+            <td class="text-center" onclick="window._ltOpenCoin('${sym}')">${coin.ath_pct}%</td>
+            <td class="text-center" onclick="window._ltOpenCoin('${sym}')">${trendBadge(coin.trend_short)}</td>
+            <td class="text-center" onclick="window._ltOpenCoin('${sym}')">${trendBadge(coin.trend_long)}</td>
+            <td class="text-center ${buyC(buy)}" onclick="window._ltOpenCoin('${sym}')">${buy}</td>
+            <td class="text-center ${sellC(sell)}" onclick="window._ltOpenCoin('${sym}')">${sell}</td>
+            <td onclick="window._ltOpenCoin('${sym}')">${coin.signal_hr}</td>
         </tr>`;
     }).join('');
 }
+
+window._ltToggleWatch = function(sym, cb) {
+    _toggleWatch(sym, cb);
+};
 
 // Called from inline onclick in scanner rows
 window._ltOpenCoin = function(symbol) {

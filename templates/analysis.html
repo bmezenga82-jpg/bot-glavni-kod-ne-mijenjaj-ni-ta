@@ -101,6 +101,7 @@
                     <table class="table table-sm table-dark table-bordered mb-0">
                         <thead>
                             <tr>
+                                <th title="Prati — notifikacija pri promjeni preporuke">🔔</th>
                                 <th>Par</th>
                                 <th class="text-end">Cijena</th>
                                 <th class="text-center">RSI dnevni</th>
@@ -220,19 +221,23 @@
                                 <table class="table table-sm table-dark table-hover table-bordered mb-0">
                                     <thead>
                                         <tr>
+                                            <th title="Prati — notifikacija pri promjeni signala">🔔</th>
                                             <th>Coin</th>
                                             <th class="text-end">Cijena</th>
                                             <th class="text-center">RSI dnevni</th>
                                             <th class="text-center">RSI tjedni</th>
                                             <th class="text-center">vs 200MA</th>
                                             <th class="text-center">Od ATH</th>
-                                            <th class="text-center">Score</th>
+                                            <th class="text-center" title="Trend kratkoročni (EMA20 vs EMA50)">Trend K</th>
+                                            <th class="text-center" title="Trend dugoročni (EMA50 vs EMA200)">Trend D</th>
+                                            <th class="text-center text-success">BUY</th>
+                                            <th class="text-center text-danger">SELL</th>
                                             <th>Signal</th>
                                         </tr>
                                     </thead>
                                     <tbody id="lt-scan-body"></tbody>
                                 </table>
-                                <small class="text-muted d-block mt-2 px-1">Klikni na coin za prikaz detaljne analize s ciljevima za prodaju. Score = RSI dnevni 20% + RSI tjedni 30% + vs 200MA 30% + BB 20%. Veći = bolja zona za akumulaciju.</small>
+                                <small class="text-muted d-block mt-2 px-1">Klikni na coin za prikaz detaljne analize. 🔔 = prati coin i primi email kad se signal promijeni. BUY ≥65 = Akumuliraj, SELL ≥65 = Uzmi profit.</small>
                             </div>
 
                             <!-- Legenda -->
@@ -241,7 +246,9 @@
                                 <div><strong>RSI dnevni/tjedni</strong> — ispod 30 = preprodan (potencijalno dno), iznad 70 = overbought (potencijalni vrh)</div>
                                 <div class="mt-1"><strong>vs 200MA</strong> — koliko je cijena ispod (-) ili iznad (+) 200-dnevnog prosjeka. Ispod -30% = historijski dobre zone za akumulaciju.</div>
                                 <div class="mt-1"><strong>Od ATH</strong> — koliko je coin pao od svog vrha. Veći pad = veći potencijal, ali i veći rizik.</div>
-                                <div class="mt-1"><strong>Score 70+</strong> = preporučeno za dugoročno; <strong>45-69</strong> = čekaj bolji entry; <strong>ispod 45</strong> = nije trenutak</div>
+                                <div class="mt-1"><strong>Trend K</strong> = kratkoročni (EMA20 vs EMA50); <strong>Trend D</strong> = dugoročni (EMA50 vs EMA200). ↑ Bull = EMA kraća iznad duže.</div>
+                                <div class="mt-1"><strong>BUY score ≥65</strong> = dobra zona za akumulaciju; <strong>SELL score ≥65</strong> = razmotri uzimanje profita; oba visoka = oprez.</div>
+                                <div class="mt-1"><strong>🔔</strong> = prati coin — dobivate email svaki put kad se signal promijeni (skeniram svake 4 sata).</div>
                                 <div class="mt-2 text-warning">⚠️ Samo informativno — nije financijski savjet.</div>
                             </div>
                         </div>

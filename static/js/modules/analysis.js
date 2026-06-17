@@ -169,18 +169,81 @@ function loadGrid() {
         });
 }
 
+// --- DCA Watchlist helpers ---
+function _getDcaWatchlist() {
+    try { return JSON.parse(localStorage.getItem('dca_watchlist') || '[]'); } catch { return []; }
+}
+function _setDcaWatchlist(list) {
+    localStorage.setItem('dca_watchlist', JSON.stringify(list));
+    // Spremi na server
+    const scannerList = (() => {
+        try { return JSON.parse(localStorage.getItem('lt_watchlist') || '[]'); } catch { return []; }
+    })();
+    fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scanner: scannerList, spot_pairs: list })
+    }).catch(() => {});
+}
+function _toggleDcaWatch(pairId, cb) {
+    let list = _getDcaWatchlist();
+    const id = parseInt(pairId);
+    if (list.includes(id)) {
+        list = list.filter(x => x !== id);
+        cb.checked = false;
+    } else {
+        list.push(id);
+        cb.checked = true;
+    }
+    _setDcaWatchlist(list);
+}
+
+function _getPrevDcaRecs() {
+    try { return JSON.parse(localStorage.getItem('dca_prev_recs') || '{}'); } catch { return {}; }
+}
+function _setPrevDcaRecs(obj) {
+    localStorage.setItem('dca_prev_recs', JSON.stringify(obj));
+}
+function _notifySpotChange(symbol, pairId, oldRec, newRec) {
+    fetch('/api/notify_spot_change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol, pair_id: pairId, old_rec: oldRec, new_rec: newRec })
+    }).catch(() => {});
+}
+
 // --- DCA tab ---
 function renderDca(data) {
     const tbody = document.getElementById('dca-body');
     tbody.innerHTML = '';
+    const watched = _getDcaWatchlist();
+    const prevRecs = _getPrevDcaRecs();
+    const newRecs = {};
+
     data.forEach(r => {
         const tr = document.createElement('tr');
+        const isWatched = watched.includes(parseInt(r.pair_id));
         if (r.error) {
-            tr.innerHTML = `${pairCell(r.symbol, r.exchange)}<td colspan="7" class="text-danger text-center small">${r.error}</td>`;
+            tr.innerHTML = `<td></td>${pairCell(r.symbol, r.exchange)}<td colspan="9" class="text-danger text-center small">${r.error}</td>`;
         } else {
             const ma200Str = r.vs_ma200 >= 0 ? `+${r.vs_ma200}%` : `${r.vs_ma200}%`;
             const highStr  = `${r.dist_from_high}%`;
+            const rec = r.recommended_mode || r.score_label || '';
+            newRecs[r.pair_id] = rec;
+
+            // Provjeri promjenu za praćene parove
+            const prev = prevRecs[r.pair_id];
+            if (isWatched && prev && prev !== rec) {
+                _notifySpotChange(r.symbol, r.pair_id, prev, rec);
+            }
+
             tr.innerHTML = `
+                <td class="text-center">
+                    <input type="checkbox" class="form-check-input dca-watch-cb"
+                        data-pair-id="${r.pair_id}"
+                        ${isWatched ? 'checked' : ''}
+                        title="Prati — notifikacija pri promjeni preporuke">
+                </td>
                 ${pairCell(r.symbol, r.exchange)}
                 <td class="text-end">${r.price}</td>
                 <td class="text-center" style="${rsiColor(r.rsi_daily)}">${r.rsi_daily}</td>
@@ -194,9 +257,18 @@ function renderDca(data) {
         }
         tbody.appendChild(tr);
     });
+
+    // Spremi nove preporuke za sljedeće uspoređivanje
+    _setPrevDcaRecs({ ..._getPrevDcaRecs(), ...newRecs });
+
     document.getElementById('dca-loading').style.display = 'none';
     document.getElementById('dca-table-wrap').style.display = '';
     document.getElementById('dca-timestamp').textContent = `Osvježeno: ${nowStr()}`;
+
+    // Checkboxovi
+    tbody.querySelectorAll('.dca-watch-cb').forEach(cb => {
+        cb.addEventListener('change', () => _toggleDcaWatch(cb.dataset.pairId, cb));
+    });
 
     tbody.querySelectorAll('.apply-mode-btn').forEach(btn => {
         btn.addEventListener('click', () => {

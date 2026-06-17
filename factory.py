@@ -88,7 +88,30 @@ def create_app():
     except Exception as e:
         logging.getLogger(__name__).warning(f"Notification checker nije pokrenut: {e}")
 
+    # Pokreni periodički scanner svake 4 sata (long-term analiza)
+    _start_periodic_scanner(app)
+
     return app
+
+
+def _start_periodic_scanner(app):
+    """Pokretanje long-term scanera svake 4 sata u pozadini."""
+    INTERVAL = 4 * 60 * 60
+
+    def loop():
+        time.sleep(60)  # Čekaj da se app podigne
+        while True:
+            try:
+                import core.long_term_analysis as _lta
+                _lta.scan_top_coins_bg(25, notify_changes=True)
+                logging.getLogger(__name__).info("Periodički scanner završio")
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"Periodički scanner greška: {e}")
+            time.sleep(INTERVAL)
+
+    t = threading.Thread(target=loop, daemon=True, name='periodic-scanner')
+    t.start()
+    logging.getLogger(__name__).info("Periodički scanner pokrenut (svake 4h)")
 
 
 def _cleanup_old_trades(app):

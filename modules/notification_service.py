@@ -63,6 +63,48 @@ def _cfg(cfg, key, sub=None, default=None):
 
 # ── Direktni triggeri (pozivaju se iz koda) ───────────────────────────────────
 
+def notify_signal_change(symbol, old_signal, new_signal, buy_score, sell_score):
+    """Šalje email kad se promjeni signal za praćeni coin (scanner watchlist)."""
+    cfg = _load_config()
+    if not cfg.get('signal_change', {}).get('enabled', True):
+        return
+    key = f'signal_change_{symbol}'
+    cd = timedelta(hours=4)
+    last = _last_sent.get(key)
+    if last and datetime.utcnow() - last < cd:
+        return
+    _mark_sent(key)
+    _send(
+        f"📊 CryptoBot — Signal promijenjen: {symbol.replace('/USDT','')}",
+        f"""<h3>Signal promijenjen za {symbol}</h3>
+        <p><b>Stari signal:</b> {old_signal}</p>
+        <p><b>Novi signal:</b> <strong>{new_signal}</strong></p>
+        <p><b>BUY Score:</b> {buy_score}/100 &nbsp;|&nbsp; <b>SELL Score:</b> {sell_score}/100</p>
+        <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
+    )
+
+def notify_spot_mode_change(pair_symbol, old_mode, new_mode):
+    """Šalje email kad se promjeni preporučeni profit mode za spot par."""
+    cfg = _load_config()
+    if not cfg.get('signal_change', {}).get('enabled', True):
+        return
+    key = f'spot_mode_{pair_symbol}'
+    cd = timedelta(hours=8)
+    last = _last_sent.get(key)
+    if last and datetime.utcnow() - last < cd:
+        return
+    _mark_sent(key)
+    mode_hr = {'usdc': 'Uzmi USDC profit', 'crypto': 'Zadrži kripto'}
+    _send(
+        f"🔄 CryptoBot — Profit mode promijenjen: {pair_symbol}",
+        f"""<h3>Preporučeni profit mode se promijenio</h3>
+        <p><b>Par:</b> {pair_symbol}</p>
+        <p><b>Bio:</b> {mode_hr.get(old_mode, old_mode)}</p>
+        <p><b>Sada:</b> <strong>{mode_hr.get(new_mode, new_mode)}</strong></p>
+        <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
+    )
+
+
 def notify_bot_error(pair_symbol, exchange, error_msg):
     cfg = _load_config()
     if not _cfg(cfg, 'bot_error'):

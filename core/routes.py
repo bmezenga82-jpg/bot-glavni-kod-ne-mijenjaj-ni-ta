@@ -869,6 +869,43 @@ def register_routes(app):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/watchlist", methods=["GET"])
+    @login_required
+    def watchlist_get():
+        try:
+            from core.long_term_analysis import get_watchlist
+            return jsonify(get_watchlist())
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/watchlist", methods=["POST"])
+    @login_required
+    def watchlist_set():
+        try:
+            from core.long_term_analysis import set_watchlist
+            data = request.get_json() or {}
+            scanner = data.get('scanner', [])
+            spot_pairs = data.get('spot_pairs', [])
+            set_watchlist(scanner, spot_pairs)
+            return jsonify({'ok': True})
+        except Exception as e:
+            logger.error(f"watchlist_set error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/notify_spot_change", methods=["POST"])
+    @login_required
+    def notify_spot_change():
+        try:
+            data = request.get_json() or {}
+            symbol = data.get('symbol', '')
+            old_rec = data.get('old_rec', '')
+            new_rec = data.get('new_rec', '')
+            from modules.notification_service import notify_spot_mode_change
+            notify_spot_mode_change(symbol, old_rec, new_rec)
+            return jsonify({'ok': True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
     @app.route("/api/set_profit_mode", methods=["POST"])
     @login_required
     def set_profit_mode():

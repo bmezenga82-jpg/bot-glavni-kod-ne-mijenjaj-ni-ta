@@ -1,4 +1,6 @@
 import ccxt
+import json
+import os
 import pandas as pd
 import numpy as np
 import logging
@@ -20,7 +22,8 @@ BTC_HALVINGS = [
 
 _scan_cache = {'data': None, 'ts': 0}
 _scan_status = {'running': False, 'error': None}
-CACHE_TTL = 3600  # 1 hour
+_prev_signals = {}   # symbol -> signal string, za detekciju promjene
+CACHE_TTL = 3600     # 1 hour
 
 
 def _make_binance():
@@ -63,6 +66,10 @@ def _bollinger(close, period=20, std_mult=2):
 
 def _sma(close, period):
     return close.rolling(period).mean()
+
+
+def _ema(close, period):
+    return close.ewm(span=period, adjust=False).mean()
 
 
 def _find_swing(df):
@@ -153,26 +160,126 @@ def _halving_info():
     }
 
 
-def _score(rsi_d, rsi_w, vs_200ma, bb_pct):
+def _vol_trend(df):
+    """Volume trend: compare recent 7d vs prior 14d."""
+    if len(df) < 21:
+        return 'neutral'
+    recent = df['volume'].tail(7).mean()
+    older = df['volume'].tail(21).head(14).mean()
+    if older <= 0:
+        return 'neutral'
+    ratio = recent / older
+    if ratio > 1.15:
+        return 'increasing'
+    elif ratio < 0.85:
+        return 'decreasing'
+    return 'neutral'
+
+
+def _trends(close):
+    """Short (EMA20 vs EMA50) and long (EMA50 vs EMA200) trend."""
+    ema20 = _ema(close, 20)
+    ema50 = _ema(close, 50)
+    ema200 = _ema(close, 200)
+    trend_short = 'bull' if float(ema20.iloc[-1]) > float(ema50.iloc[-1]) else 'bear'
+    trend_long = 'bull' if float(ema50.iloc[-1]) > float(ema200.iloc[-1]) else 'bear'
+    return trend_short, trend_long, ema20, ema50, ema200
+
+
+def _buy_score(rsi_d, rsi_w, vs_200ma, bb_pct, vol_trend):
     s = 0
-    # RSI daily (20%)
+    # RSI daily (25%)
+    if rsi_d < 25: s += 25
+    elif rsi_d < 35: s += 20
+    elif rsi_d < 45: s += 13
+    elif rsi_d < 55: s += 6
+    # RSI weekly (25%)
+    if rsi_w is not None:
+        if rsi_w < 25: s += 25
+        elif rsi_w < 35: s += 20
+        elif rsi_w < 45: s += 13
+        elif rsi_w < 55: s += 6
+    else:
+        s += 12  # neutral when no weekly data
+    # vs 200MA (25%) — below is good
+    if vs_200ma < -50: s += 25
+    elif vs_200ma < -30: s += 20
+    elif vs_200ma < -15: s += 14
+    elif vs_200ma < 0: s += 8
+    elif vs_200ma < 15: s += 3
+    # BB position (15%) — below lower band is good
+    if bb_pct < 10: s += 15
+    elif bb_pct < 25: s += 11
+    elif bb_pct < 45: s += 7
+    elif bb_pct < 65: s += 3
+    # Volume trend (10%) — increasing volume on decline = accumulation signal
+    if vol_trend == 'increasing': s += 10
+    elif vol_trend == 'neutral': s += 5
+    return min(100, s)
+
+
+def _sell_score(rsi_d, rsi_w, vs_200ma, bb_pct, vol_trend, fib_ext_hit):
+    s = 0
+    # RSI daily (25%)
+    if rsi_d > 75: s += 25
+    elif rsi_d > 65: s += 20
+    elif rsi_d > 55: s += 13
+    elif rsi_d > 45: s += 6
+    # RSI weekly (25%)
+    if rsi_w is not None:
+        if rsi_w > 75: s += 25
+        elif rsi_w > 65: s += 20
+        elif rsi_w > 55: s += 13
+        elif rsi_w > 45: s += 6
+    else:
+        s += 12  # neutral
+    # vs 200MA (20%) — above is good for sell
+    if vs_200ma > 100: s += 20
+    elif vs_200ma > 50: s += 16
+    elif vs_200ma > 20: s += 11
+    elif vs_200ma > 0: s += 6
+    # BB position (15%) — above upper band is good for sell
+    if bb_pct > 90: s += 15
+    elif bb_pct > 75: s += 11
+    elif bb_pct > 55: s += 6
+    elif bb_pct > 35: s += 3
+    # Volume divergence (10%) — price up but volume declining = weakening
+    if vol_trend == 'decreasing': s += 10
+    elif vol_trend == 'neutral': s += 5
+    # Fibonacci extension (5%) — at 1.272x or 1.618x from swing low
+    if fib_ext_hit >= 2: s += 5
+    elif fib_ext_hit == 1: s += 3
+    return min(100, s)
+
+
+def _signal_from_scores(buy_score, sell_score):
+    if buy_score >= 65 and sell_score >= 65:
+        return '⚠️ Oprez'
+    elif buy_score >= 65:
+        return '🟢 Akumuliraj'
+    elif sell_score >= 65:
+        return '🔴 Uzmi profit'
+    else:
+        return '⚪ Čekaj'
+
+
+def _score(rsi_d, rsi_w, vs_200ma, bb_pct):
+    """Legacy score — kept for backwards compat with spot analysis."""
+    s = 0
     if rsi_d < 30: s += 20
     elif rsi_d < 40: s += 15
     elif rsi_d < 50: s += 10
     elif rsi_d < 60: s += 5
-    # RSI weekly (30%)
     if rsi_w is not None:
         if rsi_w < 30: s += 30
         elif rsi_w < 40: s += 22
         elif rsi_w < 50: s += 14
         elif rsi_w < 60: s += 7
-    # vs 200MA (30%)
     if vs_200ma < -50: s += 30
     elif vs_200ma < -30: s += 25
     elif vs_200ma < -15: s += 18
     elif vs_200ma < 0: s += 10
     elif vs_200ma < 15: s += 5
-    # BB position (20%)
     if bb_pct < 15: s += 20
     elif bb_pct < 30: s += 15
     elif bb_pct < 50: s += 10
@@ -180,14 +287,31 @@ def _score(rsi_d, rsi_w, vs_200ma, bb_pct):
     return min(100, s)
 
 
-def _explanation(symbol, price, rsi_d, rsi_w, vs_200ma, ath_pct, fib_r, fib_e, macd_bull, btc_corr, score):
+def _explanation(symbol, price, rsi_d, rsi_w, vs_200ma, ath_pct, fib_r, fib_e,
+                 macd_bull, btc_corr, buy_sc, sell_sc, trend_short, trend_long, vol_trend):
     lines = []
+
+    # Trendovi
+    ts_emoji = '📈' if trend_short == 'bull' else '📉'
+    tl_emoji = '📈' if trend_long == 'bull' else '📉'
+    lines.append(f"{ts_emoji} Kratkoročni trend (EMA20/50): {'Bull ↑' if trend_short == 'bull' else 'Bear ↓'} — "
+                 f"{'EMA20 iznad EMA50, pozitivan momentum' if trend_short == 'bull' else 'EMA20 ispod EMA50, negativan momentum'}")
+    lines.append(f"{tl_emoji} Dugoročni trend (EMA50/200): {'Bull ↑' if trend_long == 'bull' else 'Bear ↓'} — "
+                 f"{'Golden cross, dugoročni uzlazni trend' if trend_long == 'bull' else 'Death cross, dugoročni silazni trend'}")
+
+    # Volumen
+    vol_map = {'increasing': '📊 Volumen: Raste ↑ — jači interes kupaca, signal akumulacije',
+               'decreasing': '📊 Volumen: Pada ↓ — slabi interes, oprez pri kupnji',
+               'neutral':    '📊 Volumen: Neutralan — nema jasnog signala'}
+    lines.append(vol_map.get(vol_trend, ''))
+
+    lines.append("")
 
     # RSI daily
     if rsi_d < 30:
-        lines.append(f"📉 Dnevni RSI {rsi_d:.1f} — Jako preprodan! Historijski rijetka zona, potencijalno dno ciklusa.")
+        lines.append(f"📉 Dnevni RSI {rsi_d:.1f} — Jako preprodan! Historijski rijetka zona, potencijalno dno.")
     elif rsi_d < 40:
-        lines.append(f"📉 Dnevni RSI {rsi_d:.1f} — Preprodan. Cijena je dosta pala, dobar entry zone za dugoročno.")
+        lines.append(f"📉 Dnevni RSI {rsi_d:.1f} — Preprodan, dobra zona za dugoročni entry.")
     elif rsi_d < 50:
         lines.append(f"➡️ Dnevni RSI {rsi_d:.1f} — Neutralno, blago bearish.")
     elif rsi_d < 60:
@@ -195,21 +319,23 @@ def _explanation(symbol, price, rsi_d, rsi_w, vs_200ma, ath_pct, fib_r, fib_e, m
     elif rsi_d < 70:
         lines.append(f"⬆️ Dnevni RSI {rsi_d:.1f} — Lagano overbought, oprez pri kupnji.")
     else:
-        lines.append(f"🔴 Dnevni RSI {rsi_d:.1f} — Jako overbought! Historijski loš timing za novi entry.")
+        lines.append(f"🔴 Dnevni RSI {rsi_d:.1f} — Jako overbought! Razmotri djelomičnu prodaju.")
 
     if rsi_w is not None:
         if rsi_w < 30:
-            lines.append(f"🔑 Tjedni RSI {rsi_w:.1f} — RIJETKA ZONA. Na altcoinima ovo je historijski bio generacijsko dno.")
+            lines.append(f"🔑 Tjedni RSI {rsi_w:.1f} — RIJETKA ZONA. Historijski generacijsko dno na altcoinima.")
         elif rsi_w < 40:
-            lines.append(f"✅ Tjedni RSI {rsi_w:.1f} — Odličan dugoročni entry. Historijski visok prinos od ove razine.")
+            lines.append(f"✅ Tjedni RSI {rsi_w:.1f} — Odličan dugoročni entry. Historijski visok prinos.")
         elif rsi_w < 50:
             lines.append(f"🟡 Tjedni RSI {rsi_w:.1f} — Prihvatljivo za DCA, nije idealno.")
+        elif rsi_w < 65:
+            lines.append(f"⚠️ Tjedni RSI {rsi_w:.1f} — Povišeno. Bolji entry bio bi na nižem RSI-u.")
         else:
-            lines.append(f"⚠️ Tjedni RSI {rsi_w:.1f} — Povišeno. Za dugoročno, bolji entry bio bi na nižem RSI-u.")
+            lines.append(f"🔴 Tjedni RSI {rsi_w:.1f} — Overbought na tjednoj razini. Razmotri smanjenje pozicije.")
 
     # 200MA
     if vs_200ma < -40:
-        lines.append(f"📊 200MA: {abs(vs_200ma):.1f}% ISPOD 200-dnevnog prosjeka — duboki bear. Historijski odlična dugoročna zona.")
+        lines.append(f"📊 200MA: {abs(vs_200ma):.1f}% ISPOD 200MA — duboki bear. Historijski odlična dugoročna zona.")
     elif vs_200ma < -20:
         lines.append(f"📊 200MA: {abs(vs_200ma):.1f}% ispod 200MA — slabost, ali dobar dugoročni entry.")
     elif vs_200ma < 0:
@@ -221,47 +347,38 @@ def _explanation(symbol, price, rsi_d, rsi_w, vs_200ma, ath_pct, fib_r, fib_e, m
 
     lines.append(f"🏔️ Od vrha: cijena je {abs(ath_pct):.1f}% ispod zadnjeg vrha (ATH: ${max(fib_r.values()):.4f})")
 
-    # Fibonacci podrška
+    # Fibonacci podrška/otpor
+    price_val = price
     nearest_sup = None
     nearest_res = None
     for lvl, p in fib_r.items():
-        if p < price and (nearest_sup is None or p > nearest_sup[1]):
+        if p < price_val and (nearest_sup is None or p > nearest_sup[1]):
             nearest_sup = (lvl, p)
-        if p > price and (nearest_res is None or p < nearest_res[1]):
+        if p > price_val and (nearest_res is None or p < nearest_res[1]):
             nearest_res = (lvl, p)
     if nearest_sup:
-        pct = (nearest_sup[1] / price - 1) * 100
+        pct = (nearest_sup[1] / price_val - 1) * 100
         lines.append(f"🔵 Fib podrška: razina {nearest_sup[0]} na ${nearest_sup[1]:.4f} ({pct:.1f}% od sad)")
     if nearest_res:
-        pct = (nearest_res[1] / price - 1) * 100
+        pct = (nearest_res[1] / price_val - 1) * 100
         lines.append(f"🟣 Fib otpor: razina {nearest_res[0]} na ${nearest_res[1]:.4f} (+{pct:.1f}% od sad)")
 
-    # Upside / sell targets
     lines.append("")
     lines.append("── CILJEVI ZA PRODAJU ──────────────────────────────")
-
-    # Fibonacci extension (upside)
-    targets = [(lvl, p) for lvl, p in sorted(fib_e.items(), key=lambda x: float(x[0])) if p > price]
+    targets = [(lvl, p) for lvl, p in sorted(fib_e.items(), key=lambda x: float(x[0])) if p > price_val]
     if targets:
-        t_lines = [f"  • Fib {lvl}× → ${p:.4f} (+{(p/price-1)*100:.0f}%)" for lvl, p in targets[:4]]
+        t_lines = [f"  • Fib {lvl}× → ${p:.4f} (+{(p/price_val-1)*100:.0f}%)" for lvl, p in targets[:4]]
         lines.append("🎯 Fibonacci upside ciljevi:\n" + "\n".join(t_lines))
 
-    # ATH kao cilj
     ath_val = max(fib_r.values())
-    ath_gain = (ath_val / price - 1) * 100
+    ath_gain = (ath_val / price_val - 1) * 100
     if ath_gain > 5:
         lines.append(f"🏔️ Prethodni ATH: ${ath_val:.4f} (+{ath_gain:.0f}% od sad) — historijski otpor/cilj")
 
-    # RSI zona za prodaju
-    lines.append("📈 RSI zona prodaje: RSI > 70 (overbought) — razmotri djelomičnu prodaju")
-    lines.append("📈 RSI zona jake prodaje: RSI > 80 — historijski blizu kratkoročnog vrha")
-
-    # MACD
     lines.append("")
     lines.append("── MOMENTUM ────────────────────────────────────────")
     lines.append("✅ MACD: bullish momentum." if macd_bull else "⚠️ MACD: bearish momentum, trend pada.")
 
-    # BTC korelacija
     if btc_corr is not None:
         if btc_corr > 0.8:
             lines.append(f"🔗 BTC korelacija {btc_corr:.2f} — jako prati BTC.")
@@ -270,13 +387,21 @@ def _explanation(symbol, price, rsi_d, rsi_w, vs_200ma, ath_pct, fib_r, fib_e, m
         else:
             lines.append(f"🔗 BTC korelacija {btc_corr:.2f} — relativno nezavisno od BTC-a.")
 
-    # Score
-    if score >= 70:
-        lines.append(f"\n🟢 UKUPNO {score}/100 — Dobra zona za dugoročnu akumulaciju.")
-    elif score >= 50:
-        lines.append(f"\n🟡 UKUPNO {score}/100 — Neutralno. Čekaj bolji entry.")
+    lines.append("")
+    lines.append("── ZAKLJUČAK ────────────────────────────────────────")
+    if buy_sc >= 65:
+        lines.append(f"🟢 BUY Score {buy_sc}/100 — Dobra zona za akumulaciju.")
+    elif buy_sc >= 45:
+        lines.append(f"🟡 BUY Score {buy_sc}/100 — Neutralno za kupnju.")
     else:
-        lines.append(f"\n🔴 UKUPNO {score}/100 — Loš timing. Moguća daljnja korekcija.")
+        lines.append(f"🔴 BUY Score {buy_sc}/100 — Loš timing za kupnju.")
+
+    if sell_sc >= 65:
+        lines.append(f"🔴 SELL Score {sell_sc}/100 — Razmotri uzimanje profita.")
+    elif sell_sc >= 45:
+        lines.append(f"🟡 SELL Score {sell_sc}/100 — Neutralno za prodaju.")
+    else:
+        lines.append(f"🟢 SELL Score {sell_sc}/100 — Nema pritiska za prodaju.")
 
     lines.append("\n⚠️ Samo informativno, nije financijski savjet. Bazirano na prošlim podacima.")
     return "\n".join(lines)
@@ -311,6 +436,9 @@ def analyze_long_term(symbol, view_range='1Y'):
     sma50 = _sma(close, min(50, len(df) - 1))
     sma200 = _sma(close, min(200, len(df) - 1))
 
+    trend_short, trend_long, ema20, ema50_s, ema200_s = _trends(close)
+    vol_t = _vol_trend(df)
+
     sma200_val = float(sma200.iloc[-1]) if not pd.isna(sma200.iloc[-1]) else None
     vs_200ma = ((price / sma200_val) - 1) * 100 if sma200_val else 0.0
 
@@ -327,6 +455,13 @@ def analyze_long_term(symbol, view_range='1Y'):
     fib_e = _fib_extension(swing_high, swing_low)
     sr_levels = _support_resistance(df)
 
+    # Fibonacci extension hit level
+    fib_ext_hit = 0
+    if price >= fib_e.get('1.618', float('inf')):
+        fib_ext_hit = 2
+    elif price >= fib_e.get('1.272', float('inf')):
+        fib_ext_hit = 1
+
     # Weekly RSI
     rsi_w = None
     try:
@@ -342,11 +477,14 @@ def analyze_long_term(symbol, view_range='1Y'):
         btc_corr = _btc_correlation(df)
 
     macd_bull = float(macd_l.iloc[-1]) > float(macd_sig.iloc[-1])
+    buy_sc = _buy_score(rsi_d, rsi_w, vs_200ma, bb_pct, vol_t)
+    sell_sc = _sell_score(rsi_d, rsi_w, vs_200ma, bb_pct, vol_t, fib_ext_hit)
     score = _score(rsi_d, rsi_w, vs_200ma, bb_pct)
     halving = _halving_info()
     explanation = _explanation(
         symbol, price, rsi_d, rsi_w, vs_200ma, ath_pct,
-        fib_r, fib_e, macd_bull, btc_corr, score
+        fib_r, fib_e, macd_bull, btc_corr, buy_sc, sell_sc,
+        trend_short, trend_long, vol_t
     )
 
     candles = [
@@ -371,6 +509,8 @@ def analyze_long_term(symbol, view_range='1Y'):
         'candles': candles, 'volume': volume,
         'sma50': _ts_series(df['ts'], sma50),
         'sma200': _ts_series(df['ts'], sma200),
+        'ema20': _ts_series(df['ts'], ema20),
+        'ema50': _ts_series(df['ts'], ema50_s),
         'bb_upper': _ts_series(df['ts'], bb_up),
         'bb_mid': _ts_series(df['ts'], bb_mid),
         'bb_lower': _ts_series(df['ts'], bb_lo),
@@ -391,8 +531,13 @@ def analyze_long_term(symbol, view_range='1Y'):
             'ath_price': round(ath, 8),
             'btc_correlation': btc_corr,
             'score': score,
+            'buy_score': buy_sc,
+            'sell_score': sell_sc,
             'macd_bull': macd_bull,
             'bb_pct': round(bb_pct, 1),
+            'trend_short': trend_short,
+            'trend_long': trend_long,
+            'vol_trend': vol_t,
         },
         'halving': halving,
         'explanation': explanation,
@@ -400,7 +545,7 @@ def analyze_long_term(symbol, view_range='1Y'):
 
 
 def _scan_one(sym, tickers_data):
-    """Scan a single coin using pre-fetched ticker data for speed."""
+    """Scan a single coin."""
     try:
         df = _fetch_ohlcv(sym, '1d', 220)
         if len(df) < 50:
@@ -418,40 +563,49 @@ def _scan_one(sym, tickers_data):
         bb_pct = (price - bb_lo_v) / bb_range * 100 if bb_range > 0 else 50
         ath = float(df['high'].max())
         ath_pct = ((price / ath) - 1) * 100
-        # Weekly RSI — fetch separately (1 extra call per coin)
-        # Weekly RSI iz daily podataka (bez extra API poziva)
+
+        # Weekly RSI from daily data
         rsi_w = None
         try:
-            df_ts = df.copy()
-            df_ts = df_ts.set_index('ts')
+            df_ts = df.copy().set_index('ts')
             df_w = df_ts['close'].resample('W').last().dropna()
             if len(df_w) >= 15:
                 rsi_w = float(_rsi_series(df_w).iloc[-1])
         except Exception:
             pass
-        score = _score(rsi_d, rsi_w, vs_200ma, bb_pct)
-        if score >= 65:
-            signal_hr = '🟢 Akumuliraj'
-        elif score >= 45:
-            signal_hr = '🟡 Čekaj'
-        else:
-            signal_hr = '🔴 Izbjegavaj'
+
+        # Trends
+        trend_short, trend_long, _, _, _ = _trends(close)
+
+        # Volume trend
+        vol_t = _vol_trend(df)
+
+        buy_sc = _buy_score(rsi_d, rsi_w, vs_200ma, bb_pct, vol_t)
+        sell_sc = _sell_score(rsi_d, rsi_w, vs_200ma, bb_pct, vol_t, 0)
+        signal_hr = _signal_from_scores(buy_sc, sell_sc)
+
         return {
-            'symbol': sym, 'price': round(price, 6),
+            'symbol': sym,
+            'price': round(price, 6),
             'rsi_daily': round(rsi_d, 1),
             'rsi_weekly': round(rsi_w, 1) if rsi_w else None,
             'vs_200ma': round(vs_200ma, 1),
             'ath_pct': round(ath_pct, 1),
-            'score': score, 'signal_hr': signal_hr,
+            'buy_score': buy_sc,
+            'sell_score': sell_sc,
+            'trend_short': trend_short,
+            'trend_long': trend_long,
+            'vol_trend': vol_t,
+            'signal_hr': signal_hr,
         }
     except Exception as e:
         logger.warning(f"Scanner skip {sym}: {e}")
         return None
 
 
-def scan_top_coins_bg(top_n=25):
+def scan_top_coins_bg(top_n=25, notify_changes=False):
     """Run scan in background greenlet — updates _scan_cache when done."""
-    global _scan_cache, _scan_status
+    global _scan_cache, _scan_status, _prev_signals
     _scan_status['running'] = True
     _scan_status['error'] = None
     try:
@@ -472,13 +626,35 @@ def scan_top_coins_bg(top_n=25):
             if res:
                 results.append(res)
 
-        results.sort(key=lambda x: x['score'], reverse=True)
+        results.sort(key=lambda x: x['buy_score'], reverse=True)
         _scan_cache = {'data': results, 'ts': datetime.now(timezone.utc).timestamp()}
+
+        if notify_changes:
+            _check_and_notify(results)
+
+        _prev_signals = {r['symbol']: r['signal_hr'] for r in results}
+
     except Exception as e:
         _scan_status['error'] = str(e)
         logger.error(f"scan_top_coins_bg greška: {e}", exc_info=True)
     finally:
         _scan_status['running'] = False
+
+
+def _check_and_notify(results):
+    """Send email if signal changed for a watched coin."""
+    try:
+        from modules.notification_service import notify_signal_change
+        watchlist = _load_watchlist()
+        watched = set(watchlist.get('scanner', []))
+        for r in results:
+            sym = r['symbol']
+            new_sig = r['signal_hr']
+            old_sig = _prev_signals.get(sym)
+            if old_sig and old_sig != new_sig and sym in watched:
+                notify_signal_change(sym, old_sig, new_sig, r['buy_score'], r['sell_score'])
+    except Exception as e:
+        logger.warning(f"_check_and_notify greška: {e}")
 
 
 def get_scan_state():
@@ -492,3 +668,29 @@ def get_scan_state():
         'data': _scan_cache['data'] if fresh else None,
         'age_min': round((now - _scan_cache['ts']) / 60, 1) if _scan_cache['ts'] else None,
     }
+
+
+# ── Watchlist ─────────────────────────────────────────────────────────────────
+
+_WATCHLIST_FILE = os.path.join(os.path.dirname(__file__), '..', 'watchlist.json')
+
+
+def _load_watchlist():
+    try:
+        with open(_WATCHLIST_FILE, 'r') as f:
+            return json.load(f)
+    except Exception:
+        return {'scanner': [], 'spot_pairs': []}
+
+
+def _save_watchlist(data):
+    with open(_WATCHLIST_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+
+
+def get_watchlist():
+    return _load_watchlist()
+
+
+def set_watchlist(scanner_coins, spot_pair_ids):
+    _save_watchlist({'scanner': scanner_coins, 'spot_pairs': spot_pair_ids})
