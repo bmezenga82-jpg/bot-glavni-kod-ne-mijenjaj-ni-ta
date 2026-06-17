@@ -63,7 +63,9 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
 
         # Check limit buy fill using candle low
         if buy_order and low <= buy_order['price']:
-            if balance >= amount:
+            total_deployed = sum(s['cost'] for s in sell_orders)
+            can_buy = balance >= amount and (total_deployed + amount) <= starting_capital
+            if can_buy:
                 bp = buy_order['price']
                 bq = buy_order['qty']
                 balance -= amount
@@ -75,7 +77,7 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
                     f'[{date}] LIMIT BUY   {bq:.5f} @ {bp:.4f} | Sell→{new_sell_p:.4f} | Buy→{new_bp:.4f} | Open lots: {len(sell_orders)}'
                 )
             else:
-                # No capital left for another grid level
+                # Capital limit reached — wait for sells before buying more
                 buy_order = None
 
         # Check sell order fills using candle high
@@ -117,7 +119,8 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
                 # More sell orders still open — place new buy below the lowest filled sell price
                 lowest_filled_sell = min(s['price'] for s in filled)
                 new_buy_price = lowest_filled_sell * (1 - buy_pct / 100)
-                if balance >= amount:
+                total_deployed = sum(s['cost'] for s in sell_orders)
+                if balance >= amount and (total_deployed + amount) <= starting_capital:
                     buy_order = {'price': new_buy_price, 'qty': amount / new_buy_price}
                     trade_log.append(
                         f'[{date}] NEW BUY ORD @ {new_buy_price:.4f} (remaining lots: {len(sell_orders)})'
