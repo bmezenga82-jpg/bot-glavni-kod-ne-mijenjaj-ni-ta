@@ -310,15 +310,15 @@ function renderScanResults(data, ageMins) {
 
 // Called from inline onclick in scanner rows
 window._ltOpenCoin = function(symbol) {
-    // Switch to chart tab and load
-    const btn = document.getElementById('tab-longterm-btn');
-    if (btn) {
-        btn.click();
-        // Wait a tick for tab to activate
+    const mainBtn = document.getElementById('tab-longterm-btn');
+    const chartBtn = document.getElementById('lt-tab-chart-btn');
+    if (mainBtn) mainBtn.click();
+    setTimeout(() => {
+        if (chartBtn) chartBtn.click();
         setTimeout(() => {
             const input = document.getElementById('lt-symbol');
-            if (input) { input.value = symbol; }
+            if (input) input.value = symbol;
             runLongTermAnalysis();
-        }, 100);
-    }
+        }, 50);
+    }, 100);
 };
