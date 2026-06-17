@@ -116,9 +116,9 @@ def _simulate_grid(ohlcv, amount, buy_pct, sell_pct, fee_rate=FEE_RATE, total_ca
             # Cancel current buy order after any sell fills (matches main.py behaviour)
             buy_order = None
             if sell_orders:
-                # More sell orders still open — place new buy below the lowest filled sell price
+                # More sell orders still open — place new buy sell_pct% below this sell (mirrors main.py)
                 lowest_filled_sell = min(s['price'] for s in filled)
-                new_buy_price = lowest_filled_sell * (1 - buy_pct / 100)
+                new_buy_price = lowest_filled_sell * (1 - sell_pct / 100)
                 total_deployed = sum(s['cost'] for s in sell_orders)
                 if balance >= amount and (total_deployed + amount) <= starting_capital:
                     buy_order = {'price': new_buy_price, 'qty': amount / new_buy_price}
