@@ -280,6 +280,7 @@ function renderPairProfits(grouped) {
         list.forEach(p => {
             const row = document.createElement('tr');
             row.dataset.pairId = p.pair_id;
+            row.dataset.symbol = p.symbol;
             const running = window.currentTradeStatus[p.symbol];
             if (running) anyRunning = true;
 
@@ -289,18 +290,20 @@ function renderPairProfits(grouped) {
             const usdcRealized = Number(p.profit_usdc);
             const usdcEquiv = Number(p.profit_usdc_equiv || 0);
             const hasCrypto = cryptoQty > 0;
+            row.dataset.cryptoQty = cryptoQty;
+            row.dataset.usdcEquiv = usdcEquiv;
 
-            let cryptoValCell = '<td class="text-end text-muted">—</td>';
+            let cryptoValCell = `<td class="text-end text-muted" id="crypto-val-${p.pair_id}">—</td>`;
             if (hasCrypto && currentPrice > 0) {
                 const diff = currentVal - usdcEquiv;
                 const color = diff >= 0 ? 'text-success' : 'text-danger';
                 const sign = diff >= 0 ? '+' : '';
-                cryptoValCell = `<td class="text-end">
+                cryptoValCell = `<td class="text-end" id="crypto-val-${p.pair_id}">
                     <span class="fw-bold ${color}">${currentVal.toFixed(2)} $</span>
                     <div style="font-size:0.7rem;" class="${color}">(${sign}${diff.toFixed(2)} $ vs USDC)</div>
                 </td>`;
             } else if (hasCrypto) {
-                cryptoValCell = `<td class="text-end text-muted" style="font-size:0.75rem;">čeka cijenu...</td>`;
+                cryptoValCell = `<td class="text-end text-muted" style="font-size:0.75rem;" id="crypto-val-${p.pair_id}">čeka cijenu...</td>`;
             }
 
             const usdcEquivCell = usdcEquiv > 0
@@ -595,5 +598,32 @@ function renderOpenPositions(list) {
                 updateData();
             });
         });
+    });
+}
+
+export function refreshCryptoPrices(priceCache) {
+    document.querySelectorAll('tr[data-crypto-qty]').forEach(row => {
+        const cryptoQty = parseFloat(row.dataset.cryptoQty);
+        if (!(cryptoQty > 0)) return;
+        const pairId = row.dataset.pairId;
+        const symbol = row.dataset.symbol;
+        const usdcEquiv = parseFloat(row.dataset.usdcEquiv) || 0;
+        const cell = document.getElementById(`crypto-val-${pairId}`);
+        if (!cell) return;
+        const price = priceCache[symbol];
+        if (!price || price === 'N/A' || typeof price !== 'number') {
+            cell.className = 'text-end text-muted';
+            cell.style.fontSize = '0.75rem';
+            cell.innerHTML = 'čeka cijenu...';
+            return;
+        }
+        const currentVal = cryptoQty * price;
+        const diff = currentVal - usdcEquiv;
+        const color = diff >= 0 ? 'text-success' : 'text-danger';
+        const sign = diff >= 0 ? '+' : '';
+        cell.className = 'text-end';
+        cell.style.fontSize = '';
+        cell.innerHTML = `<span class="fw-bold ${color}">${currentVal.toFixed(2)} $</span>
+            <div style="font-size:0.7rem;" class="${color}">(${sign}${diff.toFixed(2)} $ vs USDC)</div>`;
     });
 }

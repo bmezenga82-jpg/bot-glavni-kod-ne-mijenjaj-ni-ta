@@ -148,6 +148,11 @@ socket.on('price_update', (data) => {
             updateMarketTable(prices, priceCache);
         });
     }
+    if (document.querySelector('tr[data-crypto-qty]')) {
+        import('./modules/market_data.js').then(({ refreshCryptoPrices }) => {
+            refreshCryptoPrices(priceCache);
+        });
+    }
     for (const symbol in prices) {
         // Find the table row using the 'data-symbol' attribute
         const row = document.querySelector(`tr[data-symbol='${symbol}']`);
