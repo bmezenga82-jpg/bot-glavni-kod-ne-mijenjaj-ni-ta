@@ -382,10 +382,13 @@ def _check_daily_summary(cfg):
         return
     try:
         from core.models import ProfitLog
-        from sqlalchemy import func
-        today = now.date()
+        # Jučer — cijeli dan od 00:00 do 23:59
+        yesterday = (now - timedelta(days=1)).date()
+        day_start = datetime.combine(yesterday, datetime.min.time())
+        day_end   = datetime.combine(now.date(), datetime.min.time())
         logs = ProfitLog.query.filter(
-            ProfitLog.timestamp >= datetime.combine(today, datetime.min.time())
+            ProfitLog.timestamp >= day_start,
+            ProfitLog.timestamp < day_end
         ).all()
         if not logs:
             return
@@ -398,8 +401,8 @@ def _check_daily_summary(cfg):
         rows = ''.join(f'<tr><td>{k}</td><td style="color:green;">${v:.2f}</td></tr>' for k, v in sorted(by_pair.items(), key=lambda x: -x[1]))
         _mark_sent('daily_summary')
         _send(
-            f"📊 CryptoBot — Dnevni summary {today}",
-            f"""<h3>Dnevni summary — {today}</h3>
+            f"📊 CryptoBot — Dnevni summary {yesterday}",
+            f"""<h3>Dnevni summary — {yesterday}</h3>
             <p><b>Ukupni profit:</b> <span style="color:green;font-size:1.3em;">${total:.2f} USDC</span></p>
             <p><b>Broj ciklusa:</b> {cycles}</p>
             <table border="1" cellpadding="4" style="border-collapse:collapse;">
@@ -428,8 +431,17 @@ def _check_weekly_summary(cfg):
         return
     try:
         from core.models import ProfitLog
-        week_ago = datetime.utcnow() - timedelta(days=7)
-        logs = ProfitLog.query.filter(ProfitLog.timestamp >= week_ago).all()
+        # Prošli tjedan: ponedjeljak 00:00 → nedjelja 23:59
+        # now.weekday() == 0 znači danas je ponedjeljak → prošli tjedan počeo 7 dana unazad
+        today = now.date()
+        week_end   = datetime.combine(today, datetime.min.time())           # danas 00:00 = kraj prošle ned.
+        week_start = datetime.combine(today - timedelta(days=7), datetime.min.time())  # prije 7 dana 00:00
+        week_start_date = week_start.date()
+        week_end_date   = (week_end - timedelta(seconds=1)).date()
+        logs = ProfitLog.query.filter(
+            ProfitLog.timestamp >= week_start,
+            ProfitLog.timestamp < week_end
+        ).all()
         if not logs:
             return
         total = sum(l.profit_usdt for l in logs)
@@ -441,8 +453,9 @@ def _check_weekly_summary(cfg):
         rows = ''.join(f'<tr><td>{k}</td><td style="color:{"green" if v>=0 else "red"};">${v:.2f}</td></tr>' for k, v in sorted(by_pair.items(), key=lambda x: -x[1]))
         _mark_sent('weekly_summary')
         _send(
-            f"📈 CryptoBot — Tjedni summary",
-            f"""<h3>Tjedni summary (zadnjih 7 dana)</h3>
+            f"📈 CryptoBot — Tjedni summary ({week_start_date} — {week_end_date})",
+            f"""<h3>Tjedni summary</h3>
+            <p><b>Period:</b> {week_start_date} — {week_end_date}</p>
             <p><b>Ukupni profit:</b> <span style="color:green;font-size:1.3em;">${total:.2f} USDC</span></p>
             <p><b>Broj ciklusa:</b> {cycles}</p>
             <table border="1" cellpadding="4" style="border-collapse:collapse;">
