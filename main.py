@@ -33,6 +33,7 @@ def trade_loop(
     sell_pct = settings['sell_percentage']
     buy_pct = abs(settings['buy_percentage'])
     profit_mode = settings.get('profit_mode', 'usdc')
+    fee_rate = settings.get('fee_rate', 0.001)
 
     buy_order_id: str | None = None
     sell_orders = []
@@ -208,6 +209,7 @@ def trade_loop(
                             pair_id=pair_id,
                             retained_qty=retained_qty,
                             profit_mode=profit_mode,
+                            fee_rate=fee_rate,
                         )
                     except Exception as e:
                         logger.error(f"record_sell failed for {symbol}: {e}", exc_info=True)

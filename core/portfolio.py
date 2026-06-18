@@ -60,7 +60,11 @@ class PortfolioManager:
             logger.error(f"Cannot record sell for {symbol}: buy_price is invalid (None or zero).")
             return
 
-        profit = (sell_price - buy_price) * asset_quantity_sold
+        fee_rate = kwargs.get('fee_rate', 0.001)
+        # Pravi profit = neto primljeno od prodaje - stvarni trošak kupnje (oba s feejima)
+        sell_proceeds = sell_price * asset_quantity_sold * (1 - fee_rate)
+        buy_cost      = buy_price  * asset_quantity_sold * (1 + fee_rate)
+        profit = sell_proceeds - buy_cost
         with self._lock:
             self.total_profit += profit
 

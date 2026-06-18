@@ -148,6 +148,10 @@ def control_bot(config, app=None): # app is the flask_app_instance
             return jsonify({'status': f'Bot for {symbol} is already running.', 'pair_id': pair_id, 'bot_is_running': True})
 
         # Construct pair_config from the 'pair' object fetched from DB
+        _api_keys = load_api_keys()
+        _exchange_defaults = {'binance': 0.001, 'bybit': 0.001, 'gateio': 0.002, 'bitmart': 0.002}
+        _fee_rate = _api_keys.get(pair.exchange, {}).get('fee_rate',
+                        _exchange_defaults.get(pair.exchange, 0.001))
         pair_config = {
             "id": pair.id,
             "symbol": pair.symbol,
@@ -157,6 +161,7 @@ def control_bot(config, app=None): # app is the flask_app_instance
             "sell_percentage": pair.sell_percentage,
             "trading_mode": getattr(pair, "trading_mode", config.get('trading_mode', 'testnet')),
             "profit_mode": getattr(pair, "profit_mode", 'usdc'),
+            "fee_rate": _fee_rate,
         }
         app_obj = app or current_app._get_current_object() # Ensure we have a Flask app instance
 
