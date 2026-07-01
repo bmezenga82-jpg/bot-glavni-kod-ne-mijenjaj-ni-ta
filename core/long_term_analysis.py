@@ -447,7 +447,12 @@ def analyze_long_term(symbol, view_range='1Y'):
     bb_range = bb_up_v - bb_lo_v
     bb_pct = (price - bb_lo_v) / bb_range * 100 if bb_range > 0 else 50
 
-    ath = float(df['high'].max())
+    # ATH iz 3 godine tjednih podataka (dnevni podaci ne pokrivaju dovoljno povijest)
+    try:
+        df_ath = _fetch_ohlcv(symbol, '1w', 156)  # 3 godine
+        ath = float(df_ath['high'].max())
+    except Exception:
+        ath = float(df['high'].max())
     ath_pct = ((price / ath) - 1) * 100
 
     swing_high, swing_low = _find_swing(df)
@@ -561,7 +566,12 @@ def _scan_one(sym, tickers_data):
         bb_lo_v = float(bb_lo.iloc[-1]) if not pd.isna(bb_lo.iloc[-1]) else price
         bb_range = bb_up_v - bb_lo_v
         bb_pct = (price - bb_lo_v) / bb_range * 100 if bb_range > 0 else 50
-        ath = float(df['high'].max())
+        # ATH iz 3 godine tjednih podataka (220 dnevnih nije dovoljno)
+        try:
+            df_ath = _fetch_ohlcv(sym, '1w', 156)  # 3 godine
+            ath = float(df_ath['high'].max())
+        except Exception:
+            ath = float(df['high'].max())
         ath_pct = ((price / ath) - 1) * 100
 
         # Weekly RSI from daily data
