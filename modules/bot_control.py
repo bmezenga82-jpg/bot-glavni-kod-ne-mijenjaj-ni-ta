@@ -166,9 +166,14 @@ def control_bot(config, app=None): # app is the flask_app_instance
         app_obj = app or current_app._get_current_object() # Ensure we have a Flask app instance
 
         if bot_manager.start_bot(pair_id, symbol, pair_config, config, app_obj):
+            try:
+                pair.auto_start = True
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.warning(f"Could not set auto_start=True for {symbol}: {e}")
             return jsonify({'status': f'Bot started for {symbol} on {pair.exchange}.', 'pair_id': pair_id, 'bot_is_running': True})
         else:
-            # This case should ideally be caught by is_running above, but as a fallback:
             return jsonify({'status': f'Bot for {symbol} could not be started (possibly already running).', 'pair_id': pair_id, 'bot_is_running': bot_manager.is_running(pair_id)})
 
     elif action == 'stop':
@@ -176,17 +181,19 @@ def control_bot(config, app=None): # app is the flask_app_instance
             return jsonify({'status': f'Bot for {symbol} is not running.', 'pair_id': pair_id, 'bot_is_running': False})
 
         bot_manager.stop_bot(pair_id)
-        # Position cleanup logic - ensure db and portfolio are accessible
         try:
             with (app or current_app._get_current_object()).app_context():
+                p = TradingPair.query.get(pair_id)
+                if p:
+                    p.auto_start = False
                 position = Position.query.filter_by(symbol=symbol).first()
                 if position:
                     db.session.delete(position)
-                    db.session.commit()
-                    portfolio._load_positions() # portfolio is a global
+                db.session.commit()
+                portfolio._load_positions()
         except Exception as e:
-            current_app.logger.error(f"Error during position cleanup for {symbol} on stop: {e}", exc_info=True)
-            # Decide if this should make the overall stop action fail
+            db.session.rollback()
+            current_app.logger.error(f"Error during stop cleanup for {symbol}: {e}", exc_info=True)
 
         return jsonify({'status': f'Bot stopped for {symbol} on {pair.exchange}.', 'pair_id': pair_id, 'bot_is_running': False})
 

@@ -52,6 +52,7 @@ class TradingPair(db.Model):
     sell_percentage = db.Column(db.Float, nullable=False)
     trading_mode = db.Column(db.String(10), default='testnet')
     profit_mode = db.Column(db.String(10), nullable=False, default='usdc')
+    auto_start = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
 
     __table_args__ = (
         db.UniqueConstraint('symbol', 'exchange', name='uix_symbol_exchange'),

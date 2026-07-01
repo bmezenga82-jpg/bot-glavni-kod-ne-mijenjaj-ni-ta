@@ -91,7 +91,60 @@ def create_app():
     # Pokreni periodički scanner svake 4 sata (long-term analiza)
     _start_periodic_scanner(app)
 
+    # Auto-start botova koji su bili aktivni prije restarta
+    _auto_start_bots(app)
+
     return app
+
+
+def _auto_start_bots(app):
+    """Pri pokretanju servera automatski pokreni sve parove koji su imali auto_start=True."""
+    def _start():
+        time.sleep(10)  # Čekaj da se Flask i DB potpuno podigne
+        with app.app_context():
+            try:
+                from core.models import TradingPair
+                from core.config import load_config
+                from modules.bot_control import bot_manager, control_bot
+                from modules.utils import load_api_keys
+
+                config = load_config()
+                pairs = TradingPair.query.filter_by(auto_start=True).all()
+                if not pairs:
+                    return
+
+                log = logging.getLogger(__name__)
+                log.info(f"Auto-start: pronađeno {len(pairs)} par(ova) za pokretanje")
+
+                _exchange_defaults = {'binance': 0.001, 'bybit': 0.001, 'gateio': 0.002, 'bitmart': 0.002}
+                _api_keys = load_api_keys()
+
+                for pair in pairs:
+                    try:
+                        if bot_manager.is_running(pair.id):
+                            continue
+                        _fee_rate = _api_keys.get(pair.exchange, {}).get(
+                            'fee_rate', _exchange_defaults.get(pair.exchange, 0.001))
+                        pair_config = {
+                            "id": pair.id,
+                            "symbol": pair.symbol,
+                            "exchange": pair.exchange,
+                            "amount": pair.amount,
+                            "buy_percentage": pair.buy_percentage,
+                            "sell_percentage": pair.sell_percentage,
+                            "trading_mode": pair.trading_mode or config.get('trading_mode', 'testnet'),
+                            "profit_mode": pair.profit_mode or 'usdc',
+                            "fee_rate": _fee_rate,
+                        }
+                        bot_manager.start_bot(pair.id, pair.symbol, pair_config, config, app)
+                        log.info(f"Auto-start: {pair.symbol} ({pair.exchange}) pokrenut")
+                        time.sleep(2)  # Mali razmak između pokretanja više parova
+                    except Exception as e:
+                        logging.getLogger(__name__).error(f"Auto-start greška za {pair.symbol}: {e}", exc_info=True)
+            except Exception as e:
+                logging.getLogger(__name__).error(f"Auto-start inicijalizacija greška: {e}", exc_info=True)
+
+    threading.Thread(target=_start, daemon=True, name='auto-start-bots').start()
 
 
 def _start_periodic_scanner(app):
