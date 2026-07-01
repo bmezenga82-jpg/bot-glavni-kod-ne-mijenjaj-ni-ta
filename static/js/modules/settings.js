@@ -542,6 +542,10 @@ export function runOptimize() {
             const ed = m.end_date   || 'danas (default)';
             text += `Period:    ${sd} → ${ed} (${m.timeframe})\n`;
             text += `Kapital:   ${m.total_capital} USDC\n`;
+            if (m.combinations_tested) {
+                const stepNote = m.step_used > 0.2 ? ` (korak povećan na ${m.step_used}% — previše kombinacija)` : '';
+                text += `Kombina.:  ${m.combinations_tested} testirano, korak ${m.step_used}%${stepNote}\n`;
+            }
             if (coverageMode) {
                 text += `Način:     FIKSIRANA POKRIVENOST PADA ${m.target_coverage_pct}%\n`;
                 text += `           → Svaki buy% dobiva amount koji pokriva ${m.target_coverage_pct}% pada\n`;

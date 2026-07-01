@@ -53,8 +53,17 @@ def optimize():
     # Raspon buy%/sell% — korisnik može postaviti max vrijednost
     max_buy_pct  = max(0.4, min(float(request.form.get('max_buy_pct',  '4.0') or '4.0'), 10.0))
     max_sell_pct = max(0.4, min(float(request.form.get('max_sell_pct', '6.0') or '6.0'), 15.0))
-    # Korak: manji korak = više kombinacija = sporije (0.2% → ~420 combos za 4%/6% raspon)
+
+    # Automatski povećaj korak ako ima previše kombinacija (max 200)
+    MAX_COMBINATIONS = 200
     step = 0.2
+    while True:
+        n_buy  = int(max_buy_pct  / step)
+        n_sell = int(max_sell_pct / step)
+        if n_buy * n_sell <= MAX_COMBINATIONS or step >= 2.0:
+            break
+        step = round(step + 0.2, 2)
+
     buy_range  = [-round(x * step, 2) for x in range(1, int(max_buy_pct  / step) + 1)]
     sell_range = [ round(x * step, 2) for x in range(1, int(max_sell_pct / step) + 1)]
 
@@ -95,5 +104,7 @@ def optimize():
             'normalize_amount': normalize_amount,
             'target_coverage_pct': target_coverage_pct,
             'coverage_mode': opt.get('coverage_mode', False),
+            'combinations_tested': len(buy_range) * len(sell_range),
+            'step_used': step,
         }
     })
