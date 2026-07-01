@@ -570,6 +570,18 @@ export function runOptimize() {
             return s;
         };
 
+        const fmtConsistentCombo = (c, i) => {
+            const label = c.consistency_label || '';
+            let s = `#${i + 1}  ${label}  |  Buy: ${c.buy_pct}%  /  Sell: ${c.sell_pct}%\n`;
+            s += `     Realizirano:  ${c.net_profit >= 0 ? '+' : ''}${c.net_profit.toFixed(4)} USDC`;
+            s += `   |  Ukupni P&L: ${c.total_pnl >= 0 ? '+' : ''}${c.total_pnl.toFixed(4)} USDC`;
+            if (c.annualized_roi != null)
+                s += `   |  ${c.annualized_roi >= 0 ? '+' : ''}${c.annualized_roi.toFixed(2)}% god\n`;
+            else
+                s += '\n';
+            return s;
+        };
+
         text += '━'.repeat(50) + '\n';
         text += `  ${primaryLabel}\n`;
         text += '━'.repeat(50) + '\n\n';
@@ -579,6 +591,16 @@ export function runOptimize() {
         text += `  ${secondaryLabel}\n`;
         text += '━'.repeat(50) + '\n\n';
         secondaryList.forEach((c, i) => { text += fmtCombo(c, i) + '\n'; });
+
+        const consistentResults = m.consistent_results;
+        if (m.consistent && consistentResults && consistentResults.length) {
+            text += '━'.repeat(50) + '\n';
+            text += '  KONZISTENTNO TESTIRANJE — 3 pod-perioda\n';
+            text += '  ★★★ = robustno u svim periodima, ★☆☆ = samo 1/3\n';
+            text += '  Sortirano: više zvjezdica > veći profit\n';
+            text += '━'.repeat(50) + '\n\n';
+            consistentResults.forEach((c, i) => { text += fmtConsistentCombo(c, i) + '\n'; });
+        }
 
         text += '═'.repeat(51) + '\n';
         resultsEl.textContent = text;

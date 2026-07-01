@@ -252,7 +252,7 @@ def _amount_for_coverage(total_capital: float, buy_pct: float, target_coverage_p
 
 
 def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=None, top_n=5,
-                      normalize_amount=False, target_coverage_pct=None):
+                      normalize_amount=False, target_coverage_pct=None, consistent=False):
     """
     Test all buy/sell % combinations and return the top_n by realized profit.
 
@@ -351,9 +351,54 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
     # Top po ukupnom P&L (realized + unrealized)
     top_by_pnl = sorted(results, key=lambda x: x['total_pnl'], reverse=True)[:top_n]
 
+    # ── Konzistentno testiranje — 3 pod-perioda ──────────────────────────────
+    consistent_results = None
+    if consistent and len(ohlcv) >= 90:
+        n = len(ohlcv)
+        thirds = [ohlcv[:n//3], ohlcv[n//3:2*n//3], ohlcv[2*n//3:]]
+        period_tops = []
+        for part in thirds:
+            if len(part) < 30:
+                continue
+            part_results = []
+            for buy_pct in buy_range:
+                if target_coverage_pct:
+                    amount = _amount_for_coverage(total_capital, abs(buy_pct), target_coverage_pct)
+                elif normalize_amount:
+                    amount = round(base_amount * abs(buy_pct) / ref_buy_pct, 2)
+                else:
+                    amount = base_amount
+                amount = max(amount, 1.0)
+                for sell_pct in sell_range:
+                    r = _simulate_grid(part, amount, abs(buy_pct), abs(sell_pct), total_capital=total_capital)
+                    part_results.append({'buy_pct': buy_pct, 'sell_pct': sell_pct,
+                                         'amount': round(amount, 2), 'net_profit': r['net_profit']})
+            top_keys = {(r['buy_pct'], r['sell_pct'])
+                        for r in sorted(part_results, key=lambda x: x['net_profit'], reverse=True)[:top_n]}
+            period_tops.append(top_keys)
+
+        # Broji konzistentnost — koliko pod-perioda je svaka kombinacija bila u top N
+        consistency_count = {}
+        for pt in period_tops:
+            for key in pt:
+                consistency_count[key] = consistency_count.get(key, 0) + 1
+
+        # Spoji s ukupnim rezultatima
+        results_map = {(r['buy_pct'], r['sell_pct']): r for r in results}
+        consistent_list = []
+        for (bp, sp), cnt in consistency_count.items():
+            r = results_map.get((bp, sp))
+            if r:
+                stars = '★' * cnt + '☆' * (len(period_tops) - cnt)
+                consistent_list.append({**r, 'consistency': cnt,
+                                         'consistency_label': f"{stars} {cnt}/{len(period_tops)} perioda"})
+        consistent_results = sorted(consistent_list,
+                                    key=lambda x: (x['consistency'], x['net_profit']), reverse=True)[:top_n * 2]
+
     return {
         'top_by_pnl': top_by_pnl,
         'top_by_realized': top_by_realized,
         'coverage_mode': bool(target_coverage_pct),
         'target_coverage_pct': target_coverage_pct,
+        'consistent_results': consistent_results,
     }

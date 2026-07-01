@@ -50,22 +50,31 @@ def optimize():
     total_capital = float(request.form.get('total_capital', amount))
     timeframe = request.form.get('timeframe', '1h')
 
-    # Raspon buy%/sell% — korisnik može postaviti max vrijednost
+    # Raspon buy%/sell% — od/do
+    min_buy_pct  = max(0.2, min(float(request.form.get('min_buy_pct',  '0.2') or '0.2'), 10.0))
     max_buy_pct  = max(0.4, min(float(request.form.get('max_buy_pct',  '4.0') or '4.0'), 10.0))
+    min_sell_pct = max(0.2, min(float(request.form.get('min_sell_pct', '0.2') or '0.2'), 15.0))
     max_sell_pct = max(0.4, min(float(request.form.get('max_sell_pct', '6.0') or '6.0'), 15.0))
+    min_buy_pct  = min(min_buy_pct,  max_buy_pct)
+    min_sell_pct = min(min_sell_pct, max_sell_pct)
+    consistent = 'consistent' in request.form
 
-    # Automatski povećaj korak ako ima previše kombinacija (max 200)
-    MAX_COMBINATIONS = 200
+    # Automatski povećaj korak ako ima previše kombinacija (max 200, ili 100 za consistent jer x3)
+    MAX_COMBINATIONS = 100 if consistent else 200
     step = 0.2
+    buy_span  = max_buy_pct  - min_buy_pct  + step
+    sell_span = max_sell_pct - min_sell_pct + step
     while True:
-        n_buy  = int(max_buy_pct  / step)
-        n_sell = int(max_sell_pct / step)
+        n_buy  = max(1, int(buy_span  / step))
+        n_sell = max(1, int(sell_span / step))
         if n_buy * n_sell <= MAX_COMBINATIONS or step >= 2.0:
             break
         step = round(step + 0.2, 2)
 
-    buy_range  = [-round(x * step, 2) for x in range(1, int(max_buy_pct  / step) + 1)]
-    sell_range = [ round(x * step, 2) for x in range(1, int(max_sell_pct / step) + 1)]
+    buy_range  = [-round(min_buy_pct  + x * step, 2)
+                  for x in range(int((max_buy_pct  - min_buy_pct)  / step) + 1)]
+    sell_range = [ round(min_sell_pct + x * step, 2)
+                  for x in range(int((max_sell_pct - min_sell_pct) / step) + 1)]
 
     buy_percentage = abs(float(request.form.get('buy_percentage', 1.0)))
     normalize_amount = 'normalize_amount' in request.form
@@ -86,6 +95,7 @@ def optimize():
         pair, buy_range, sell_range, start_date, end_date, top_n=5,
         normalize_amount=normalize_amount,
         target_coverage_pct=target_coverage_pct,
+        consistent=consistent,
     )
     if not opt or not opt.get('top_by_pnl'):
         return jsonify({'error': 'Could not fetch data or no results'}), 500
@@ -106,5 +116,7 @@ def optimize():
             'coverage_mode': opt.get('coverage_mode', False),
             'combinations_tested': len(buy_range) * len(sell_range),
             'step_used': step,
+            'consistent': consistent,
+            'consistent_results': opt.get('consistent_results'),
         }
     })
