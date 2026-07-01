@@ -383,12 +383,12 @@ def get_open_positions():
                 elif tr.side.lower() == "sell":
                     qty = tr.amount
                     while qty > 0 and queue:
-                        buy_qty, buy_price = queue[0]
+                        buy_qty, buy_price = queue[-1]
                         if buy_qty <= qty + 1e-8:
                             qty -= buy_qty
-                            queue.pop(0)
+                            queue.pop()
                         else:
-                            queue[0][0] = buy_qty - qty
+                            queue[-1][0] = buy_qty - qty
                             qty = 0
 
             if not queue:
