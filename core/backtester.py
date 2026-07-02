@@ -379,9 +379,11 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
 
         # Broji konzistentnost — koliko pod-perioda je svaka kombinacija bila u top N
         consistency_count = {}
-        for pt in period_tops:
+        consistency_periods = {}  # key -> lista perioda (1-based)
+        for i, pt in enumerate(period_tops):
             for key in pt:
                 consistency_count[key] = consistency_count.get(key, 0) + 1
+                consistency_periods.setdefault(key, []).append(i + 1)
 
         # Spoji s ukupnim rezultatima
         results_map = {(r['buy_pct'], r['sell_pct']): r for r in results}
@@ -390,8 +392,9 @@ def optimize_strategy(pair, buy_range, sell_range, start_date=None, end_date=Non
             r = results_map.get((bp, sp))
             if r:
                 stars = '★' * cnt + '☆' * (len(period_tops) - cnt)
+                periods_str = ', '.join(f'P{p}' for p in consistency_periods[(bp, sp)])
                 consistent_list.append({**r, 'consistency': cnt,
-                                         'consistency_label': f"{stars} {cnt}/{len(period_tops)} perioda"})
+                                         'consistency_label': f"{stars} {cnt}/{len(period_tops)} [{periods_str}]"})
         consistent_results = sorted(consistent_list,
                                     key=lambda x: (x['consistency'], x['net_profit']), reverse=True)[:top_n * 2]
 
