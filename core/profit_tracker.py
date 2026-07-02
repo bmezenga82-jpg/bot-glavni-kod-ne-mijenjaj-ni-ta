@@ -50,6 +50,7 @@ class ProfitTracker:
             profit_usdt=round(profit, 6),
             exchange=exchange,
             trading_mode=trading_mode,
+            profit_mode=profit_mode,
         )
         try:
             db.session.add(entry)

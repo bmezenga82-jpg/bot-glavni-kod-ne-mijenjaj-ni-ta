@@ -50,7 +50,7 @@ export function loadProfitLogData(page = 1) {
                     <td>${timestamp}</td>
                     <td>${entry.symbol || 'N/A'}</td>
                     <td>${entry.exchange || 'N/A'}</td>
-                    <td>${entry.trading_mode || 'N/A'}</td>
+                    <td>${entry.profit_mode || entry.trading_mode || 'N/A'}</td>
                     <td>${buyPrice}</td>
                     <td>${sellPrice}</td>
                     <td>${assetQty}</td>

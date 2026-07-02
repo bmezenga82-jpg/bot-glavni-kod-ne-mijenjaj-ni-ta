@@ -10,9 +10,8 @@ class ProfitLog(db.Model):
     amount = db.Column(db.Float, nullable=False)
     profit_usdt = db.Column(db.Float, nullable=False)
     exchange = db.Column(db.String(50), nullable=False, default='binance')
-    # It's good to be explicit about nullable, even if default is set.
-    # For mode, 'real' or 'testnet'
     trading_mode = db.Column(db.String(10), nullable=False, default='testnet')
+    profit_mode = db.Column(db.String(10), nullable=False, default='usdc', server_default='usdc')
 
 class Position(db.Model):
     id = db.Column(db.Integer, primary_key=True)

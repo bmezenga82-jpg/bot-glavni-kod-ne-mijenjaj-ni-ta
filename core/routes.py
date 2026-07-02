@@ -573,6 +573,7 @@ def register_routes(app):
                     "profit_usdt": entry.profit_usdt,
                     "exchange": entry.exchange,
                     "trading_mode": entry.trading_mode,
+                    "profit_mode": entry.profit_mode,
                 }
                 for entry in paginated_entries.items
             ]
