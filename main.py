@@ -37,6 +37,7 @@ def trade_loop(
 
     buy_order_id: str | None = None
     sell_orders = []
+    processed_sell_ids: set = set()  # guard against double-processing the same fill
 
     def reload_settings():
         """Reload mutable trading parameters from DB (hot config update)."""
@@ -194,6 +195,11 @@ def trade_loop(
             for sell_order in sell_orders[:]:  # Iterate over a copy
                 status = exchange.check_order_status(sell_order['id'], symbol)
                 if status['status'] in ('closed', 'filled'):
+                    if sell_order['id'] in processed_sell_ids:
+                        logger.warning(f"Sell {sell_order['id']} already processed — skipping duplicate")
+                        sell_orders.remove(sell_order)
+                        continue
+                    processed_sell_ids.add(sell_order['id'])
                     price = sell_order['price']
                     qty = sell_order['amount']
                     retained_qty = sell_order.get('retained_qty', 0.0)
@@ -236,10 +242,14 @@ def trade_loop(
                     # If a buy order is active, cancel it
                     if buy_order_id:
                         logger.info(f"Attempting to cancel buy order {buy_order_id} after sell.")
-                        exchange.cancel_order(buy_order_id, symbol)
-                        order_mgr.cancel_orders(symbol, side='buy')
-                        buy_order_id = None
-                        logger.info(f"Canceled buy order after sell.")
+                        try:
+                            exchange.cancel_order(buy_order_id, symbol)
+                            order_mgr.cancel_orders(symbol, side='buy')
+                            logger.info(f"Canceled buy order after sell.")
+                        except Exception as e:
+                            logger.error(f"Failed to cancel buy {buy_order_id} after sell: {e}", exc_info=True)
+                        finally:
+                            buy_order_id = None
 
                     if sell_orders:
                         # More sells remain -> place next buy sell_pct% below this sell price
