@@ -18,7 +18,7 @@ from modules.settings import (
     set_base_currency,
     update_pair_config,
 )
-from modules.backtest import backtest, optimize
+from modules.backtest import backtest, optimize, optimize_status
 import logging
 from concurrent.futures import ThreadPoolExecutor  # Added import
 import io
@@ -211,6 +211,11 @@ def register_routes(app):
     @login_required
     def optimize_route():
         return optimize()
+
+    @app.route("/optimize/status/<job_id>")
+    @login_required
+    def optimize_status_route(job_id):
+        return optimize_status(job_id)
 
     @app.route("/api/backtest/folders", methods=["GET"])
     @login_required

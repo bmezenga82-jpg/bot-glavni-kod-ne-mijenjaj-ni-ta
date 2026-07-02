@@ -508,21 +508,35 @@ export function runOptimize() {
     }
 
     const formData = new FormData(form);
-    resultsEl.textContent = 'Optimizing... (ovo može potrajati 30-60 sekundi za duži period)';
-    fetch('/optimize', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            resultsEl.textContent = 'Greška: ' + data.error;
-            return;
-        }
-        if (!data.top_combos || !data.top_combos.length) {
-            resultsEl.textContent = 'Nema rezultata.';
-            return;
-        }
+    let dots = 0;
+    let pollTimer = null;
+    resultsEl.textContent = 'Pokretanje optimizacije...';
+
+    const showProgress = (msg) => {
+        dots = (dots + 1) % 4;
+        resultsEl.textContent = msg + '.'.repeat(dots);
+    };
+
+    fetch('/optimize', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(init => {
+        if (init.error) { resultsEl.textContent = 'Greška: ' + init.error; return; }
+        const jobId = init.job_id;
+        let elapsed = 0;
+        pollTimer = setInterval(() => {
+            elapsed += 2;
+            showProgress(`Optimizacija u tijeku (${elapsed}s)`);
+            fetch(`/optimize/status/${jobId}`)
+            .then(r => r.json())
+            .then(job => {
+                if (job.status === 'running') return;
+                clearInterval(pollTimer);
+                if (job.status === 'error') { resultsEl.textContent = 'Greška: ' + job.error; return; }
+                const data = job.result;
+                if (!data || !data.top_combos || !data.top_combos.length) {
+                    resultsEl.textContent = 'Nema rezultata.';
+                    return;
+                }
         const optimizeBy = document.getElementById('optimize_by')?.value || 'realized';
         const m = data.meta || {};
         const coverageMode = m.coverage_mode || false;
@@ -604,6 +618,9 @@ export function runOptimize() {
 
         text += '═'.repeat(51) + '\n';
         resultsEl.textContent = text;
+            })
+            .catch(err => { clearInterval(pollTimer); resultsEl.textContent = 'Greška pri dohvatu: ' + err; });
+        }, 2000);
     })
     .catch(error => {
         resultsEl.textContent = 'Greška: ' + error;
