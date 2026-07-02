@@ -93,6 +93,7 @@ def trade_loop(
                     'amount': o['amount'],
                     'buy_price': implied_buy,
                     'retained_qty': rec_retained,
+                    'profit_mode': profit_mode,
                 })
                 order_mgr.set_order(symbol, 'sell', o['price'], o['amount'], o['id'], exchange=settings['exchange'])
             if ex_buys:
@@ -128,6 +129,7 @@ def trade_loop(
                                 'amount': t['amount'],
                                 'buy_price': t['price'],
                                 'retained_qty': dt_retained,
+                                'profit_mode': profit_mode,
                             })
                             order_mgr.set_order(symbol, 'sell', expected_sell, t['amount'], new_sell['order_id'], exchange=settings['exchange'])
                             open_sell_prices.add(expected_sell)
@@ -195,9 +197,10 @@ def trade_loop(
                     price = sell_order['price']
                     qty = sell_order['amount']
                     retained_qty = sell_order.get('retained_qty', 0.0)
+                    order_profit_mode = sell_order.get('profit_mode', profit_mode)
 
                     logger.info(
-                        f"Sold {qty} at {price} — Retained {retained_qty} (Mode: {profit_mode})"
+                        f"Sold {qty} at {price} — Retained {retained_qty} (Mode: {order_profit_mode})"
                     )
 
                     # Svaki korak je nezavisan — pad jednog ne smije blokirati ostale
@@ -208,7 +211,7 @@ def trade_loop(
                             trading_mode=settings['trading_mode'],
                             pair_id=pair_id,
                             retained_qty=retained_qty,
-                            profit_mode=profit_mode,
+                            profit_mode=order_profit_mode,
                             fee_rate=fee_rate,
                         )
                     except Exception as e:
@@ -315,7 +318,7 @@ def trade_loop(
                         sell_order = exchange.place_limit_order(symbol, 'sell', sell_price, sell_qty)
                         if sell_order and 'order_id' in sell_order:
                             sell_order_id = sell_order['order_id']
-                            sell_orders.append({'id': sell_order_id, 'price': sell_price, 'amount': sell_qty, 'buy_price': buy_price, 'retained_qty': retained_qty})
+                            sell_orders.append({'id': sell_order_id, 'price': sell_price, 'amount': sell_qty, 'buy_price': buy_price, 'retained_qty': retained_qty, 'profit_mode': profit_mode})
                             order_mgr.set_order(symbol, 'sell', sell_price, sell_qty, sell_order_id, exchange=settings['exchange'])
                             logger.info(f"Placed new sell order {sell_order_id} for {sell_qty} at {sell_price}. Retained {retained_qty} (Mode: {profit_mode})")
 
@@ -373,7 +376,7 @@ def trade_loop(
                 sell = exchange.place_limit_order(symbol, 'sell', sell_price, sell_qty)
                 if sell and 'order_id' in sell:
                     sell_order_id = sell['order_id']
-                    sell_orders.append({'id': sell_order_id, 'price': sell_price, 'amount': sell_qty, 'buy_price': price, 'retained_qty': retained_qty})
+                    sell_orders.append({'id': sell_order_id, 'price': sell_price, 'amount': sell_qty, 'buy_price': price, 'retained_qty': retained_qty, 'profit_mode': profit_mode})
                     order_mgr.set_order(symbol, 'sell', sell_price, sell_qty, sell_order_id, exchange=settings['exchange'])
 
                 # Place initial buy order
