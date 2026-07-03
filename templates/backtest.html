@@ -263,11 +263,13 @@ function updateOptimizeMode() {
 }
 
 function updateComboCount() {
+    const minBuy  = parseFloat(document.getElementById('min_buy_pct')?.value  || 0.2);
     const maxBuy  = parseFloat(document.getElementById('max_buy_pct')?.value  || 4);
+    const minSell = parseFloat(document.getElementById('min_sell_pct')?.value || 0.2);
     const maxSell = parseFloat(document.getElementById('max_sell_pct')?.value || 6);
     const step = 0.2;
-    const nBuy  = Math.floor(maxBuy  / step);
-    const nSell = Math.floor(maxSell / step);
+    const nBuy  = Math.max(1, Math.floor((maxBuy  - minBuy)  / step) + 1);
+    const nSell = Math.max(1, Math.floor((maxSell - minSell) / step) + 1);
     const label = document.getElementById('combo-count-label');
     if (label) label.textContent = `→ ${nBuy} × ${nSell} = ${nBuy * nSell} kombinacija`;
 }
@@ -275,7 +277,7 @@ function updateComboCount() {
 document.querySelectorAll('input[name="optimize_mode"]').forEach(r =>
     r.addEventListener('change', updateOptimizeMode)
 );
-['max_buy_pct', 'max_sell_pct'].forEach(id => {
+['min_buy_pct', 'max_buy_pct', 'min_sell_pct', 'max_sell_pct'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updateComboCount);
 });
 
