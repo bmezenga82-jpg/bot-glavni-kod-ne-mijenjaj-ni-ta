@@ -84,10 +84,9 @@ def trade_loop(
                 implied_buy = o['price'] / (1 + sell_pct / 100)
                 # U crypto modu rekonstruiraj retained_qty: ukupna qty pri implied_buy minus sell qty
                 if profit_mode == 'crypto':
-                    # Ne koristimo o['amount'] jer burza zaokružuje sell qty (npr. 0.018035→0.018)
-                    # što daje lažno visok retained. Računamo direktno iz postotka:
-                    # retained = usdc_amount * sell_pct/100 / sell_price
-                    rec_retained = max(0.0, round(usdc_amount * sell_pct / 100 / o['price'], 8))
+                    # retained = sell_qty * sell_pct/100 — izvedeno iz stvarnog sell ordera,
+                    # ne ovisi o trenutnom usdc_amount (koji se mogao promijeniti od postavljanja)
+                    rec_retained = max(0.0, round(o['amount'] * sell_pct / 100, 8))
                 else:
                     rec_retained = 0.0
                 sell_orders.append({
