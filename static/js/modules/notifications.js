@@ -22,7 +22,9 @@ export function updateNotifications() {
                             }
                         }
                         const li = document.createElement('li');
-                        li.innerHTML = `<a class="dropdown-item ${msg.type === 'error' ? 'text-danger' : 'text-success'}">${symbol}: ${msg.message}</a>`;
+                        const ts = msg.timestamp ? new Date(msg.timestamp) : null;
+                        const tsStr = ts ? `${String(ts.getDate()).padStart(2,'0')}.${String(ts.getMonth()+1).padStart(2,'0')}. ${String(ts.getHours()).padStart(2,'0')}:${String(ts.getMinutes()).padStart(2,'0')} ` : '';
+                        li.innerHTML = `<a class="dropdown-item ${msg.type === 'error' ? 'text-danger' : 'text-success'}"><small class="text-muted">${tsStr}</small>${symbol}: ${msg.message}</a>`;
                         list.appendChild(li);
                     });
                 }

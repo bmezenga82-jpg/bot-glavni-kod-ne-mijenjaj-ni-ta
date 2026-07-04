@@ -58,6 +58,7 @@ def create_app():
     # Configure a specific logger for strategy logs or add handler to root/app logger
     strategy_handler = StrategyLogHandler()
     strategy_handler.setLevel(logging.INFO) # Capture INFO and above for strategy logs
+    strategy_handler.setFormatter(logging.Formatter('%(asctime)s %(message)s', datefmt='%d.%m. %H:%M'))
 
     # Add to Flask app's logger
     app.logger.addHandler(strategy_handler)
