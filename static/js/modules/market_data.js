@@ -77,7 +77,7 @@ export function updateData() {
                             li.className = `list-group-item ${msg.type === 'error' ? 'text-danger' : 'text-success'}`;
                             const ts = msg.timestamp ? new Date(msg.timestamp) : null;
                             const tsStr = ts ? `${String(ts.getDate()).padStart(2,'0')}.${String(ts.getMonth()+1).padStart(2,'0')}. ${String(ts.getHours()).padStart(2,'0')}:${String(ts.getMinutes()).padStart(2,'0')} ` : '';
-                            li.innerHTML = `<small style="opacity:0.65">${tsStr}</small>${sym}: ${msg.message}`;
+                            li.innerHTML = `<small>${tsStr}</small>${sym}: ${msg.message}`;
                             logEl.appendChild(li);
                         });
                     });
