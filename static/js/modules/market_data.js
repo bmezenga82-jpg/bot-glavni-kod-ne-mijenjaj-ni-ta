@@ -75,7 +75,9 @@ export function updateData() {
                         msgs.slice(-10).forEach(msg => {
                             const li = document.createElement('li');
                             li.className = `list-group-item ${msg.type === 'error' ? 'text-danger' : 'text-success'}`;
-                            li.textContent = `${sym}: ${msg.message}`;
+                            const ts = msg.timestamp ? new Date(msg.timestamp) : null;
+                            const tsStr = ts ? `${String(ts.getDate()).padStart(2,'0')}.${String(ts.getMonth()+1).padStart(2,'0')}. ${String(ts.getHours()).padStart(2,'0')}:${String(ts.getMinutes()).padStart(2,'0')} ` : '';
+                            li.innerHTML = `<small class="text-muted">${tsStr}</small>${sym}: ${msg.message}`;
                             logEl.appendChild(li);
                         });
                     });
