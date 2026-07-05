@@ -486,6 +486,7 @@ def _check_price_drop_from_sell(cfg):
     if not section.get('enabled'):
         return
     drop_pct = float(section.get('drop_pct', 55))
+    auto_action = bool(section.get('auto_action', False))
     try:
         from core.models import TradingPair, Order
         from modules.bot_control import bot_manager
@@ -513,9 +514,15 @@ def _check_price_drop_from_sell(cfg):
                 continue
             drop = (highest_sell - current) / highest_sell * 100
             key = f"{pair.symbol}|{pair.exchange}"
-            if drop_state.get(key, {}).get('status') == 'normal' and drop >= drop_pct:
-                drop_state[key] = {'status': 'dropped', 'lowest_sell': lowest_sell}
+            if drop_state.get(key, {}).get('status') != 'dropped' and drop >= drop_pct:
+                drop_state[key] = {'status': 'dropped', 'lowest_sell': lowest_sell, 'pair_id': pair_id}
                 changed = True
+                auto_note = '<p><b>Akcija:</b> Bot automatski zaustavljen.</p>' if auto_action else '<p><b>Preporuka:</b> Ugasi par — čekaj oporavak.</p>'
+                if auto_action:
+                    try:
+                        bot_manager.stop_bot(pair_id)
+                    except Exception as ex:
+                        logger.warning(f"auto stop failed for {pair.symbol}: {ex}")
                 _send(
                     f"⚠️ CryptoBot — Veliki pad: {pair.symbol} ({pair.exchange})",
                     f"""<h3>Cijena pala {drop:.1f}% ispod sell ordera</h3>
@@ -523,7 +530,7 @@ def _check_price_drop_from_sell(cfg):
                     <p><b>Najviši sell order:</b> ${highest_sell:.4f}</p>
                     <p><b>Najniži sell order:</b> ${lowest_sell:.4f}</p>
                     <p><b>Trenutna cijena:</b> ${current:.4f} ({drop:.1f}% ispod)</p>
-                    <p><b>Preporuka:</b> Ugasi par — čekaj oporavak iznad ${lowest_sell:.4f}.</p>
+                    {auto_note}
                     <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
                 )
 
@@ -541,15 +548,22 @@ def _check_price_drop_from_sell(cfg):
             if not isinstance(current, (int, float)):
                 continue
             if current >= lowest_sell:
+                saved_pair_id = pair_info.get('pair_id')
                 drop_state[key] = {'status': 'normal', 'lowest_sell': None}
                 changed = True
+                auto_note = '<p><b>Akcija:</b> Bot automatski pokrenut.</p>' if auto_action else '<p><b>Preporuka:</b> Možeš ponovno upaliti par.</p>'
+                if auto_action and saved_pair_id:
+                    try:
+                        bot_manager.start_bot(saved_pair_id)
+                    except Exception as ex:
+                        logger.warning(f"auto start failed for {pair.symbol}: {ex}")
                 _send(
                     f"✅ CryptoBot — Oporavak: {pair.symbol} ({pair.exchange})",
                     f"""<h3>Cijena prešla najniži sell order — {pair.symbol}</h3>
                     <p><b>Par:</b> {pair.symbol} | <b>Exchange:</b> {pair.exchange}</p>
                     <p><b>Referentna cijena (najniži sell):</b> ${lowest_sell:.4f}</p>
                     <p><b>Trenutna cijena:</b> ${current:.4f}</p>
-                    <p><b>Preporuka:</b> Možeš ponovno upaliti par.</p>
+                    {auto_note}
                     <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
                 )
 

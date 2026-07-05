@@ -421,6 +421,10 @@
                                     value="55" min="5" max="95" step="5" style="width:70px;">
                                 <small class="text-white">%</small>
                             </div>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <input type="checkbox" class="form-check-input notif-param" id="n-pricedrop-auto" data-key="price_drop_alert" data-param="auto_action">
+                                <label class="form-check-label text-white" for="n-pricedrop-auto">Automatski stop/start</label>
+                            </div>
                             <small class="text-white-50 mt-2 d-block">Oporavak: kad cijena prijeđe najniži sell order koji je bio aktivan u trenutku pada</small>
                         </div>
                     </div>
@@ -709,7 +713,10 @@ document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(element => {
     document.querySelectorAll('.notif-param').forEach(inp => {
         const key = inp.dataset.key;
         const param = inp.dataset.param;
-        if (cfg[key]?.[param] !== undefined) inp.value = cfg[key][param];
+        if (cfg[key]?.[param] !== undefined) {
+            if (inp.type === 'checkbox') inp.checked = cfg[key][param];
+            else inp.value = cfg[key][param];
+        }
     });
     document.querySelectorAll('.notif-balance-limit').forEach(inp => {
         const ex = inp.dataset.exchange;
@@ -728,7 +735,7 @@ document.getElementById('notif-save-btn')?.addEventListener('click', async () =>
         const key = inp.dataset.key;
         const param = inp.dataset.param;
         if (!cfg[key]) cfg[key] = {};
-        cfg[key][param] = inp.type === 'number' ? (parseFloat(inp.value) || 0) : inp.value;
+        cfg[key][param] = inp.type === 'number' ? (parseFloat(inp.value) || 0) : inp.type === 'checkbox' ? inp.checked : inp.value;
     });
     if (!cfg['balance_low']) cfg['balance_low'] = { enabled: false };
     cfg['balance_low'].limits = {};
