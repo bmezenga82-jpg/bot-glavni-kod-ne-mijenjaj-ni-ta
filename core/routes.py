@@ -344,6 +344,7 @@ def register_routes(app):
             roi_pct=data.get('roi_pct'), annualized_roi=data.get('annualized_roi'),
             trade_count=data.get('trade_count'), open_positions=data.get('open_positions'),
             period_days=data.get('period_days'),
+            folder_id=data.get('folder_id'),
         )
         _db.session.add(t)
         _db.session.commit()
