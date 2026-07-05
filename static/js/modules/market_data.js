@@ -108,6 +108,8 @@ export function updateData() {
                             ? priceValue.toFixed(4)
                             : (priceValue || 'N/A');
                     }
+
+
                 }
             }
 
@@ -473,6 +475,7 @@ function renderOpenPositions(list) {
             <td class="text-end" style="white-space: nowrap;">
                 <div class="d-flex flex-column align-items-end">
                     <div class="fw-bold text-warning" style="font-size: 0.9rem; line-height: 1;">$${avgBuyPrice.toFixed(4)}</div>
+                    <div style="font-size: 0.55rem; letter-spacing: 0.5px;">BREAK-EVEN</div>
                 </div>
             </td>
             <td class="text-end" style="white-space: nowrap;">

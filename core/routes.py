@@ -202,6 +202,44 @@ def register_routes(app):
         notification_list.sort(key=lambda x: x["timestamp"], reverse=True)
         return render_template("notifications.html", notifications=notification_list)
 
+    @app.route("/api/backtest/quick", methods=["POST"])
+    @login_required
+    def backtest_quick():
+        from core.backtester import run_backtest
+        from datetime import date, timedelta
+        data = request.get_json()
+        symbol = data.get('symbol', '')
+        exchange = data.get('exchange', 'binance')
+        buy_pct = float(data.get('buy_pct', 1.0))
+        sell_pct = float(data.get('sell_pct', 1.0))
+        amount = float(data.get('amount', 100.0))
+        total_capital = float(data.get('total_capital', amount * 10))
+        profit_mode = data.get('profit_mode', 'usdc')
+        days = int(data.get('days', 30))
+        end = date.today()
+        start = end - timedelta(days=days)
+        try:
+            results = run_backtest(
+                [{'symbol': symbol, 'exchange': 'binance', 'buy_percentage': buy_pct,
+                  'sell_percentage': sell_pct, 'amount': amount, 'total_capital': total_capital,
+                  'profit_mode': profit_mode}],
+                start_date=str(start), end_date=str(end)
+            )
+            r = results.get(symbol, {})
+            pm = r.get('profit_mode', profit_mode)
+            display_profit = r.get('usdc_equivalent', 0) if pm == 'crypto' else r.get('net_profit', 0)
+            return jsonify({
+                'net_profit': round(display_profit, 4),
+                'trade_count': r.get('trade_count', 0),
+                'roi_pct': round(r.get('roi_pct', 0), 2),
+                'profit_mode': pm,
+                'crypto_profit_qty': round(r.get('crypto_profit_qty', 0), 6),
+                'unrealized_pnl': round(r.get('unrealized_pnl', 0), 4),
+                'candles': r.get('candles', 0),
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     @app.route("/backtest", methods=["GET", "POST"])
     @login_required
     def backtest_route():
