@@ -12,10 +12,25 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 KEY_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'api_keys.json'))
+_STATE_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'notification_state.json'))
 
 # In-memory cooldown tracker — sprječava duplikate
 # {key: datetime_last_sent}
 _last_sent = {}
+
+def _load_state():
+    try:
+        with open(_STATE_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_state(state):
+    try:
+        with open(_STATE_FILE, 'w') as f:
+            json.dump(state, f)
+    except Exception:
+        pass
 COOLDOWN = {
     'bot_error':           timedelta(hours=1),
     'bot_inactive':        timedelta(hours=2),
@@ -160,11 +175,13 @@ def notify_cumulative_milestone(total_profit):
     if milestone is None:
         return
     milestone = float(milestone)
-    # Provjeri je li prešao granicu
-    last_milestone = _last_sent.get('cumulative_milestone_value', 0)
+    # Provjeri je li prešao granicu — persistirano u fajlu da preživi restart
+    state = _load_state()
+    last_milestone = state.get('cumulative_milestone_value', 0)
     current_milestone = int(total_profit / milestone) * milestone
     if current_milestone > last_milestone and total_profit >= milestone:
-        _last_sent['cumulative_milestone_value'] = current_milestone
+        state['cumulative_milestone_value'] = current_milestone
+        _save_state(state)
         _send(
             f"🏆 CryptoBot — Kumulativni profit: ${current_milestone:.0f}+",
             f"""<h3>Dostignut novi profit milestone!</h3>

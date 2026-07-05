@@ -271,7 +271,9 @@ function updateComboCount() {
     const nBuy  = Math.max(1, Math.floor((maxBuy  - minBuy)  / step) + 1);
     const nSell = Math.max(1, Math.floor((maxSell - minSell) / step) + 1);
     const label = document.getElementById('combo-count-label');
-    if (label) label.textContent = `→ ${nBuy} × ${nSell} = ${nBuy * nSell} kombinacija`;
+    const total = nBuy * nSell;
+    const note = total > 120 ? ' — precizno do 120, korak će biti povećan' : '';
+    if (label) label.textContent = `→ ${nBuy} × ${nSell} = ${total} kombinacija${note}`;
 }
 
 document.querySelectorAll('input[name="optimize_mode"]').forEach(r =>
