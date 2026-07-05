@@ -481,6 +481,68 @@ def _check_weekly_summary(cfg):
     except Exception as e:
         logger.debug(f"weekly summary error: {e}")
 
+def _check_price_drop_from_sell(cfg):
+    section = cfg.get('price_drop_alert', {})
+    if not section.get('enabled'):
+        return
+    drop_pct = float(section.get('drop_pct', 55))
+    recovery_pct = float(section.get('recovery_pct', 10))
+    try:
+        from core.models import TradingPair, Order
+        from modules.bot_control import bot_manager
+        from modules.utils import get_price
+        state = _load_state()
+        drop_state = state.get('price_drop_state', {})
+        changed = False
+
+        for pair_id, status in bot_manager.get_status().items():
+            pair = TradingPair.query.get(pair_id)
+            if not pair:
+                continue
+            sell_orders = Order.query.filter_by(
+                symbol=pair.symbol, exchange=pair.exchange, side='sell', status='open'
+            ).all()
+            if not sell_orders:
+                continue
+            highest_sell = max(o.price for o in sell_orders)
+            current = get_price(pair.exchange, pair.symbol, pair.trading_mode)
+            if not isinstance(current, (int, float)):
+                continue
+            drop = (highest_sell - current) / highest_sell * 100
+            key = f"{pair.symbol}|{pair.exchange}"
+            pair_state = drop_state.get(key, 'normal')
+
+            if pair_state == 'normal' and drop >= drop_pct:
+                drop_state[key] = 'dropped'
+                changed = True
+                _send(
+                    f"⚠️ CryptoBot — Veliki pad: {pair.symbol} ({pair.exchange})",
+                    f"""<h3>Cijena pala {drop:.1f}% ispod sell ordera</h3>
+                    <p><b>Par:</b> {pair.symbol} | <b>Exchange:</b> {pair.exchange}</p>
+                    <p><b>Najviši sell order:</b> ${highest_sell:.4f}</p>
+                    <p><b>Trenutna cijena:</b> ${current:.4f} ({drop:.1f}% ispod)</p>
+                    <p><b>Preporuka:</b> Razmotri zaustavljanje para.</p>
+                    <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
+                )
+            elif pair_state == 'dropped' and drop <= recovery_pct:
+                drop_state[key] = 'normal'
+                changed = True
+                _send(
+                    f"✅ CryptoBot — Oporavak: {pair.symbol} ({pair.exchange})",
+                    f"""<h3>Cijena se oporavila — {pair.symbol}</h3>
+                    <p><b>Par:</b> {pair.symbol} | <b>Exchange:</b> {pair.exchange}</p>
+                    <p><b>Najviši sell order:</b> ${highest_sell:.4f}</p>
+                    <p><b>Trenutna cijena:</b> ${current:.4f} (samo {drop:.1f}% ispod)</p>
+                    <p><b>Preporuka:</b> Možeš ponovno upaliti par.</p>
+                    <p><small>{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</small></p>"""
+                )
+
+        if changed:
+            state['price_drop_state'] = drop_state
+            _save_state(state)
+    except Exception as e:
+        logger.warning(f"price drop check error: {e}")
+
 # ── Glavni checker (poziva se iz background threada) ─────────────────────────
 
 def check_all(app, pairs_status=None):
@@ -498,6 +560,7 @@ def check_all(app, pairs_status=None):
         _check_rebalancing(cfg)
         _check_daily_summary(cfg)
         _check_weekly_summary(cfg)
+        _check_price_drop_from_sell(cfg)
 
 # ── Background thread ─────────────────────────────────────────────────────────
 
