@@ -48,6 +48,8 @@ function loadChart() {
                     plugins: {
                         legend: { labels: { color: '#ccc' } },
                         tooltip: {
+                            mode: 'index',
+                            intersect: false,
                             callbacks: {
                                 label: ctx => ` ${fmt(ctx.parsed.y, 4)} $`
                             }
