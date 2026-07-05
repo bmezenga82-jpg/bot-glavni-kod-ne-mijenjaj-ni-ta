@@ -482,11 +482,6 @@ def _check_weekly_summary(cfg):
         logger.debug(f"weekly summary error: {e}")
 
 def _check_price_drop_from_sell(cfg):
-    section = cfg.get('price_drop_alert', {})
-    if not section.get('enabled'):
-        return
-    drop_pct = float(section.get('drop_pct', 55))
-    auto_action = bool(section.get('auto_action', False))
     try:
         from core.models import TradingPair, Order
         from modules.bot_control import bot_manager
@@ -500,8 +495,10 @@ def _check_price_drop_from_sell(cfg):
             if not status.get('running'):
                 continue
             pair = TradingPair.query.get(pair_id)
-            if not pair:
+            if not pair or not getattr(pair, 'drop_alert_enabled', False):
                 continue
+            drop_pct = float(getattr(pair, 'drop_alert_pct', 55))
+            auto_action = bool(getattr(pair, 'drop_alert_auto', False))
             sell_orders = Order.query.filter_by(
                 symbol=pair.symbol, exchange=pair.exchange, side='sell', status='open'
             ).all()
@@ -537,6 +534,8 @@ def _check_price_drop_from_sell(cfg):
         # ── Provjera oporavka — za sve parove u 'dropped' stanju (i zaustavljene) ──
         all_pairs = TradingPair.query.all()
         for pair in all_pairs:
+            if not getattr(pair, 'drop_alert_enabled', False):
+                continue
             key = f"{pair.symbol}|{pair.exchange}"
             pair_info = drop_state.get(key, {})
             if pair_info.get('status') != 'dropped':
@@ -549,6 +548,7 @@ def _check_price_drop_from_sell(cfg):
                 continue
             if current >= lowest_sell:
                 saved_pair_id = pair_info.get('pair_id')
+                auto_action = bool(getattr(pair, 'drop_alert_auto', False))
                 drop_state[key] = {'status': 'normal', 'lowest_sell': None}
                 changed = True
                 auto_note = '<p><b>Akcija:</b> Bot automatski pokrenut.</p>' if auto_action else '<p><b>Preporuka:</b> Možeš ponovno upaliti par.</p>'

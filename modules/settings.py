@@ -240,6 +240,9 @@ def update_pair_config(config):
         pair.trading_mode = mode
         if profit_mode in ['usdc', 'crypto']:
             pair.profit_mode = profit_mode
+        pair.drop_alert_enabled = bool(data.get('drop_alert_enabled', False))
+        pair.drop_alert_pct = float(data.get('drop_alert_pct', 55.0))
+        pair.drop_alert_auto = bool(data.get('drop_alert_auto', False))
     except (TypeError, ValueError):
         return jsonify({'status': 'error', 'message': 'Invalid values'}), 400
 

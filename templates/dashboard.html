@@ -140,7 +140,7 @@
                                         <button class="btn btn-xxs btn-warning edit-action-btn"
                                         id="edit-action-{{ pair['id'] }}"
                                         data-running="{{ 'true' if pair['is_running'] else 'false' }}"
-                                        onclick="openEditModal({{ pair['id'] }}, '{{ pair['symbol'] }}', {{ pair['buy_percentage'] }}, {{ pair['sell_percentage'] }}, {{ pair['amount'] }}, '{{ pair['exchange'] }}', '{{ pair['trading_mode'] }}', '{{ pair['profit_mode'] }}', this.dataset.running === 'true')">
+                                        onclick="openEditModal({{ pair['id'] }}, '{{ pair['symbol'] }}', {{ pair['buy_percentage'] }}, {{ pair['sell_percentage'] }}, {{ pair['amount'] }}, '{{ pair['exchange'] }}', '{{ pair['trading_mode'] }}', '{{ pair['profit_mode'] }}', this.dataset.running === 'true', {{ 'true' if pair['drop_alert_enabled'] else 'false' }}, {{ pair['drop_alert_pct'] }}, {{ 'true' if pair['drop_alert_auto'] else 'false' }})">
                                             Edit
                                         </button>
                                     </div>
@@ -286,6 +286,21 @@
                                 <option value="usdc">usdc</option>
                                 <option value="crypto">crypto</option>
                             </select>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="form-check mb-0">
+                                <input type="checkbox" class="form-check-input" id="dropAlertEnabled">
+                                <label class="form-check-label" for="dropAlertEnabled">Alarm pada od sell</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <label class="mb-0 small">Pad %:</label>
+                                <input type="number" id="dropAlertPct" value="55" min="5" max="95" step="5" class="form-control form-control-sm" style="width:68px;">
+                            </div>
+                            <div class="form-check mb-0">
+                                <input type="checkbox" class="form-check-input" id="dropAlertAuto">
+                                <label class="form-check-label" for="dropAlertAuto">Auto stop/start</label>
+                            </div>
                         </div>
                     </form>
                     <div class="mt-3 d-flex align-items-center gap-2 small flex-wrap">

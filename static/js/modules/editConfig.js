@@ -1,4 +1,4 @@
-export function openEditModal(id, symbol, buyPercentage, sellPercentage, amount, exchange, mode, profitMode, isRunning) {
+export function openEditModal(id, symbol, buyPercentage, sellPercentage, amount, exchange, mode, profitMode, isRunning, dropEnabled, dropPct, dropAuto) {
     document.getElementById('edit-id').value = id;
     document.getElementById('edit-symbol').value = symbol;
     document.getElementById('buyPercentage').value = buyPercentage;
@@ -24,6 +24,13 @@ export function openEditModal(id, symbol, buyPercentage, sellPercentage, amount,
         profitSelect.value = profitMode || 'usdc';
         profitSelect.disabled = false;
     }
+    const dropEnabledEl = document.getElementById('dropAlertEnabled');
+    if (dropEnabledEl) dropEnabledEl.checked = !!dropEnabled;
+    const dropPctEl = document.getElementById('dropAlertPct');
+    if (dropPctEl) dropPctEl.value = dropPct ?? 55;
+    const dropAutoEl = document.getElementById('dropAlertAuto');
+    if (dropAutoEl) dropAutoEl.checked = !!dropAuto;
+
     const notice = document.getElementById('edit-running-notice');
     if (notice) notice.classList.toggle('d-none', !isRunning);
     document.getElementById('editConfigModalLabel').textContent = `Pair Configuration for ${symbol}`;
@@ -39,6 +46,9 @@ export function saveConfig() {
     const amount = document.getElementById('amount').value;
     const mode = document.getElementById('tradingMode').value;
     const profitMode = document.getElementById('profitMode').value;
+    const dropAlertEnabled = document.getElementById('dropAlertEnabled')?.checked || false;
+    const dropAlertPct = parseFloat(document.getElementById('dropAlertPct')?.value || 55);
+    const dropAlertAuto = document.getElementById('dropAlertAuto')?.checked || false;
 
     fetch('/api/update_pair_config', {
         method: 'POST',
@@ -53,7 +63,10 @@ export function saveConfig() {
             amount: parseFloat(amount),
             exchange: document.getElementById('exchangeSelect').value,
             trading_mode: mode,
-            profit_mode: profitMode
+            profit_mode: profitMode,
+            drop_alert_enabled: dropAlertEnabled,
+            drop_alert_pct: dropAlertPct,
+            drop_alert_auto: dropAlertAuto,
         }),
     })
     .then(response => response.json())

@@ -52,6 +52,9 @@ class TradingPair(db.Model):
     trading_mode = db.Column(db.String(10), default='testnet')
     profit_mode = db.Column(db.String(10), nullable=False, default='usdc')
     auto_start = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    drop_alert_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    drop_alert_pct = db.Column(db.Float, nullable=False, default=55.0, server_default='55.0')
+    drop_alert_auto = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
 
     __table_args__ = (
         db.UniqueConstraint('symbol', 'exchange', name='uix_symbol_exchange'),

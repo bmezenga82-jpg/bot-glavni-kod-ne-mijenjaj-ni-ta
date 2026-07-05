@@ -248,6 +248,9 @@ def get_pairs():
                 "sell_percentage": pair.sell_percentage,
                 "trading_mode": getattr(pair, "trading_mode", "testnet"),
                 "profit_mode": getattr(pair, "profit_mode", "usdc"),
+                "drop_alert_enabled": getattr(pair, "drop_alert_enabled", False),
+                "drop_alert_pct": getattr(pair, "drop_alert_pct", 55.0),
+                "drop_alert_auto": getattr(pair, "drop_alert_auto", False),
             }
             for pair in db_pairs
         ]
